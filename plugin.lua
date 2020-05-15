@@ -61,7 +61,6 @@ function menu_information()
     end
 end
 
-
 function menu_linearSV()
     if imgui.BeginTabItem("Linear SV") then
         -- Initialize variables
@@ -161,11 +160,96 @@ function sv_linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     for step = 0, intermediatePoints, 1 do
         local offset = step * timeInterval + startOffset
         local velocity = step * velocityInterval + startSV
-        local sv = utils.CreateScrollVelocity(offset, velocity)
+        -- local sv = utils.CreateScrollVelocity(offset, velocity)
+        local sv = {offset=offset, velocity=velocity}
         table.insert(SVs, sv)
     end
 
     return SVs
+end
+
+--[[
+    about beziers
+
+    i originally planned to support any number of control points from 3 (quadratic)
+    to, idk, 10 or something
+
+    i ran into some issues when trying to write general code for all orders of n,
+    which made me give up on them for now
+
+    the way to *properly* do it
+        - find length t at position x
+        - use the derivative of bezier to find y at t
+
+    problem is that i cant reliably perform the first step for any curve
+    so i guess i'll be using a very bad approach to this for now... if you know more about
+    this stuff please get in contact with me
+]]
+
+-- @return table of scroll velocities
+function sv_cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageSV, intermediatePoints, skipEndSV)
+
+    local stepInterval = 1/intermediatePoints
+    local timeInterval = (endOffset - startOffset) * stepInterval
+
+    -- the larger this number, the more accurate the final sv is
+    -- ... and the longer it's going to take
+    local totalSampleSize = intermediatePoints * 100
+    local allBezierSamples = {}
+    for t=0, 1, 1/totalSampleSize do
+        local x = cubicBezier({0, P1_x, P2_x, 1}, t)
+        local y = cubicBezier({0, P1_y, P2_y, 1}, t)
+        table.insert(allBezierSamples, {x=x,y=y})
+    end
+
+    local SVs = {}
+    local positions = {}
+
+    local currentPoint = 0
+
+    for sampleCounter = 1, totalSampleSize, 1 do
+        if allBezierSamples[sampleCounter].x > currentPoint then
+            table.insert(positions, allBezierSamples[sampleCounter].y)
+            currentPoint = currentPoint + stepInterval
+        end
+    end
+
+    for i = 1, intermediatePoints, 1 do
+        local offset = (i-1) * timeInterval + startOffset
+        local velocity = util_round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
+        local sv = {offset=offset, velocity=velocity}
+        table.insert(SVs, sv)
+    end
+
+    if skipEndSV == false then
+        table.insert(SVs, {offset=endOffset, velocity=averageSV})
+    end
+
+    return SVs
+end
+
+-- MATH ----------------------------------------------------
+
+-- Simple recursive implementation of the binomial coefficient
+function binom(n, k)
+    if k == 0 or k == n then return 1 end
+    return binom(n-1, k-1) + binom(n-1, k)
+end
+
+-- Currently unused
+function bernsteinPolynomial (i,n,t) return binom(n,i) * t^i * (1-t)^(n-i) end
+
+-- Derivative for *any* bezier curve with at point t
+-- Currently unused
+function bezierDerivative(P, t)
+    local n = util_tableLength(P)
+    local sum = 0
+    for i = 0, n-2, 1 do sum = sum + bernsteinPolynomial(i,n-2,t) * (P[i+2].y - P[i+1].y) end
+    return sum
+end
+
+function cubicBezier(P, t)
+    return P[1] + 3*t*(P[2]-P[1]) + 3*t^2*(P[1]+P[3]-2*P[2]) + t^3*(P[4]-P[1]+3*P[2]-3*P[3])
 end
 
 -- UTIL ---------------------------------------------------
@@ -183,6 +267,8 @@ end
 function util_displayVal(label, value)
     imgui.TextWrapped(string.format("%s: %s", label, tostring(value)))
 end
+
+function util_round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
 
 -- EDITOR ----------------------------------------------------------
 
