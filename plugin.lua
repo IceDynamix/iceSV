@@ -6,14 +6,14 @@
 
 function draw()
     window_svMenu()
-    imgui.ShowDemoWindow()
+    -- imgui.ShowDemoWindow()
     -- imgui.ShowUserGuide()
 end
 
 -- WINDOWS ----------------------------------------------------
 
 function window_svMenu()
-    statusMessage = util_getValue("statusMessage", "")
+    statusMessage = state.GetValue("statusMessage") or "v1.0"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
@@ -21,7 +21,7 @@ function window_svMenu()
     menu_information()
     menu_linearSV()
     -- menu_stutterSV()
-    -- menu_bezierSV()
+    -- menu_cubicBezierSV()
     -- menu_copySV()
     -- menu_BpmGradient()
     imgui.EndTabBar()
@@ -45,104 +45,86 @@ function menu_information()
         imgui.TextWrapped("Hover over each function for an explanation")
 
         imgui.BulletText("Linear SV")
-        if imgui.IsItemHovered() then imgui.SetTooltip("Creates an SV gradient based on two points in time") end
+        gui_tooltip("Creates an SV gradient based on two points in time")
 
         imgui.BulletText("Stutter SV")
-        if imgui.IsItemHovered() then imgui.SetTooltip("Creates a normalized stutter effect") end
+        gui_tooltip("Creates a normalized stutter effect")
 
         imgui.Separator()
 
         imgui.TextWrapped("Github: https://example.com")
-        if imgui.IsItemHovered() then imgui.SetTooltip("I can't hyperlink stuff in a plugin, so you'll have to make do with manually copying the url :(") end
+        gui_tooltip("I can't hyperlink stuff in a plugin, so you'll have to make do with manually copying the url :(")
         imgui.TextWrapped("Created by IceDynamix")
         imgui.TextWrapped("Heavily inspired by Evening's Reamber")
-        if imgui.IsItemHovered() then imgui.SetTooltip("let's be real this is basically a direct quaver port") end
+        gui_tooltip("let's be real this is basically a direct quaver port")
         imgui.EndTabItem()
     end
 end
 
-function menu_linearSV()
-    if imgui.BeginTabItem("Linear SV") then
-        -- Initialize variables
 
-        local linear_startSV = util_getValue("linear_startSV", 1)
-        local linear_endSV = util_getValue("linear_endSV", 1)
-        local linear_intermediatePoints = util_getValue("linear_intermediatePoints", 16)
-        local linear_startOffset = util_getValue("linear_startOffset", 0)
-        local linear_endOffset = util_getValue("linear_endOffset", 0)
-        local linear_skipEndSV = util_getValue("linear_skipEndSV", false)
+function menu_linearSV()
+
+    local menuID = "linear"
+
+    if imgui.BeginTabItem("Linear SV") then
+
+        -- Initialize variables
+        local vars = {
+            startSV = 1,
+            endSV = 1,
+            intermediatePoints = 16,
+            startOffset = 0,
+            endOffset = 0,
+            skipEndSV = false
+        }
+
+        vars = util_retrieveStateVariables(menuID, vars)
 
         -- Create UI Elements
 
-        imgui.TextWrapped("OFFSET")
+        gui_title("Offset")
 
-        _, linear_startOffset = imgui.InputInt("Start offset in ms", linear_startOffset, 1000)
-        _, linear_endOffset = imgui.InputInt("End offset in ms", linear_endOffset, 1000)
-
-        imgui.TextWrapped("Copy current timestamp to... ")
-
-        imgui.SameLine()
-
-        if imgui.Button("Start offset") then
-            linear_startOffset = state.SongTime
-            statusMessage = "Copied into start offset!"
-        end
-
-        imgui.SameLine()
-
-        if imgui.Button("End offset") then
-            linear_endOffset = state.SongTime
-            statusMessage = "Copied into end offset!"
-        end
+        vars = gui_startEndOffset(vars)
 
         imgui.Separator()
 
-        imgui.TextWrapped("VELOCITIES")
+        gui_title("Velocities")
 
-        _, linear_startSV = imgui.SliderFloat("Start Velocity", linear_startSV, -10.0, 10.0, "%.2fx")
-        if imgui.IsItemHovered() then imgui.SetTooltip("Ctrl+Click on a slider to enter as text!") end
+        _, vars["startSV"] = imgui.SliderFloat("Start Velocity", vars["startSV"], -10.0, 10.0, "%.2fx")
+        gui_tooltip("Ctrl+Click on a slider to enter as text!")
 
-        _, linear_endSV = imgui.SliderFloat("End Velocity", linear_endSV, -10.0, 10.0, "%.2fx")
-        if imgui.IsItemHovered() then imgui.SetTooltip("Ctrl+Click on a slider to enter as text!") end
+        _, vars["endSV"] = imgui.SliderFloat("End Velocity", vars["endSV"], -10.0, 10.0, "%.2fx")
+        gui_tooltip("Ctrl+Click on a slider to enter as text!")
 
         swapButton = imgui.Button("Swap start and end velocity")
-        if swapButton then linear_startSV, linear_endSV = linear_endSV, linear_startSV end
+        if swapButton then vars["startSV"], vars["endSV"] = vars["endSV"], vars["startSV"] end
 
         imgui.Separator()
 
-        imgui.TextWrapped("UTILITIES")
+        gui_title("Utilities")
 
-        _, linear_intermediatePoints = imgui.InputInt("Intermediate points", linear_intermediatePoints, 4)
-        _, linear_skipEndSV = imgui.Checkbox("Skip end SV?", linear_skipEndSV)
+        _, vars["intermediatePoints"] = imgui.InputInt("Intermediate points", vars["intermediatePoints"], 4)
+        _, vars["skipEndSV"] = imgui.Checkbox("Skip end SV?", vars["skipEndSV"])
 
         imgui.Separator()
 
         if imgui.Button("Insert into map") then
             SVs = sv_linear(
-                linear_startSV,
-                linear_endSV,
-                linear_startOffset,
-                linear_endOffset,
-                linear_intermediatePoints,
-                linear_skipEndSV
+                vars["startSV"],
+                vars["endSV"],
+                vars["startOffset"],
+                vars["endOffset"],
+                vars["intermediatePoints"],
+                vars["skipEndSV"]
             )
             editor_placeSVs(SVs)
-            statusMessage = "Inserted " .. util_tableLength(SVs) .. " SV points!"
         end
 
         -- Save variables
-
-        state.SetValue("linear_startSV", linear_startSV)
-        state.SetValue("linear_endSV", linear_endSV)
-        state.SetValue("linear_intermediatePoints", linear_intermediatePoints)
-        state.SetValue("linear_startOffset", linear_startOffset)
-        state.SetValue("linear_endOffset", linear_endOffset)
-        state.SetValue("linear_skipEndSV", linear_skipEndSV)
+        util_saveStateVariables(menuID, vars)
 
         imgui.EndTabItem()
     end
-
-
 end
 
 -- SV ---------------------------------------------------
@@ -254,8 +236,17 @@ end
 
 -- UTIL ---------------------------------------------------
 
-function util_getValue(label, defaultValue)
-    return state.GetValue(label) or defaultValue
+function util_retrieveStateVariables(menuID, variables)
+    for key in pairs(variables) do
+        variables[key] = state.GetValue(menuID..key) or variables[key]
+    end
+    return variables
+end
+
+function util_saveStateVariables(menuID, variables)
+    for key in pairs(variables) do
+        state.SetValue(menuID..key, variables[key])
+    end
 end
 
 function util_tableLength(table)
@@ -268,7 +259,38 @@ function util_displayVal(label, value)
     imgui.TextWrapped(string.format("%s: %s", label, tostring(value)))
 end
 
-function util_round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
+-- GUI ELEMENTS ----------------------------------------------------------
+
+function gui_title(title)
+    imgui.TextWrapped(string.upper(title))
+end
+
+function gui_startEndOffset(variables)
+    _, variables["startOffset"] = imgui.InputInt("Start offset in ms", variables["startOffset"], 1000)
+    _, variables["endOffset"] = imgui.InputInt("End offset in ms", variables["endOffset"], 1000)
+
+    imgui.TextWrapped("Copy current timestamp to... ")
+
+    imgui.SameLine()
+
+    if imgui.Button("Start offset") then
+        variables["startOffset"] = state.SongTime
+        statusMessage = "Copied into start offset!"
+    end
+
+    imgui.SameLine()
+
+    if imgui.Button("End offset") then
+        variables["endOffset"] = state.SongTime
+        statusMessage = "Copied into end offset!"
+    end
+
+    return variables
+end
+
+function gui_tooltip(text)
+    if imgui.IsItemHovered() then imgui.SetTooltip(text) end
+end
 
 -- EDITOR ----------------------------------------------------------
 
@@ -278,4 +300,5 @@ function editor_placeSVs(SVs)
     for _, sv in pairs(SVs) do
         print(string.format("Added SV at: %4.2fms \t| %4.2fx", sv.StartTime, sv.Multiplier))
     end
+    statusMessage = "Inserted " .. util_tableLength(SVs) .. " SV points!"
 end
