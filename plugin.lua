@@ -259,6 +259,8 @@ function util_displayVal(label, value)
     imgui.TextWrapped(string.format("%s: %s", label, tostring(value)))
 end
 
+function util_round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
+
 -- GUI ELEMENTS ----------------------------------------------------------
 
 function gui_title(title)
