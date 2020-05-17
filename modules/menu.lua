@@ -187,8 +187,7 @@ function menu.cubicBezierSV()
         gui.separator()
         gui.title("Calculate")
 
-        imgui.PushItemWidth(style.CONTENT_WIDTH)
-        if imgui.Button("Insert into map") then
+        if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
             vars["lastSVs"] = sv.cubicBezier(
                 vars["x1"],
                 vars["y1"],
@@ -202,7 +201,6 @@ function menu.cubicBezierSV()
             )
             editor.placeSVs(vars["lastSVs"])
         end
-        imgui.PopItemWidth()
 
         util.saveStateVariables(menuID, vars)
     end
