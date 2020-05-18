@@ -68,7 +68,6 @@ function menu.linearSV()
         end
 
         gui.separator()
-
         gui.title("Utilities")
 
         imgui.PushItemWidth(style.CONTENT_WIDTH)
@@ -80,7 +79,6 @@ function menu.linearSV()
         _, vars["skipEndSV"] = imgui.Checkbox("Skip end SV?", vars["skipEndSV"])
 
         gui.separator()
-
         gui.title("CALCULATE")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
@@ -118,7 +116,8 @@ function menu.cubicBezierSV()
             averageSV = 1.0,
             intermediatePoints = 16,
             skipEndSV = false,
-            lastSVs = {}
+            lastSVs = {},
+            lastPositionValues = {}
         }
 
         util.retrieveStateVariables(menuID, vars)
@@ -188,7 +187,7 @@ function menu.cubicBezierSV()
         gui.title("Calculate")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
-            vars["lastSVs"] = sv.cubicBezier(
+            SVs, positionValues = sv.cubicBezier(
                 vars["x1"],
                 vars["y1"],
                 vars["x2"],
@@ -199,7 +198,17 @@ function menu.cubicBezierSV()
                 vars["intermediatePoints"],
                 vars["skipEndSV"]
             )
-            editor.placeSVs(vars["lastSVs"])
+
+            editor.placeSVs(SVs)
+            vars["lastSVs"] = SVs
+            vars["lastPositionValues"] = positionValues
+        end
+
+        if SVs then
+            gui.separator()
+            gui.title("Plots")
+            gui.plot(positionValues, "Position Data", "y")
+            gui.plot(SVs, "Velocity Data", "Multiplier")
         end
 
         util.saveStateVariables(menuID, vars)

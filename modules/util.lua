@@ -10,15 +10,30 @@ function util.saveStateVariables(menuID, variables)
     end
 end
 
-function util.displayVal(label, value)
-    imgui.TextWrapped(string.format("%s: %s", label, tostring(value)))
+function util.printTable(table)
+    util.toString(table, true)
+    if table then
+        imgui.Columns(2)
+        imgui.Text("Key");   imgui.NextColumn();
+        imgui.Text("Value"); imgui.NextColumn();
+        imgui.Separator()
+        for key, value in pairs(table) do
+            util.toString(key, true)   imgui.NextColumn();
+            util.toString(value, true) imgui.NextColumn();
+        end
+        imgui.Columns(1)
+    end
 end
 
-function util.toString(var)
+function util.toString(var, print)
     local string = ""
-    string = var or "<null>"
-    if type(var) == "table" then string = "<list.length=".. #var ..">" end
-    if var == "" then string = "<empty string>" end
+
+    if var == nil then string = "<null>"
+    elseif type(var) == "table" then string = "<table.length=".. #var ..">"
+    elseif var == "" then string = "<empty string>"
+    else string = "<" .. type(var) .. "=" .. string .. ">" end
+
+    if print then imgui.Text(string) end
     return string
 end
 
@@ -29,4 +44,20 @@ function util.calcAbsoluteWidths(relativeWidths)
         table.insert(absoluteWidths, (value * style.CONTENT_WIDTH) - (style.SAMELINE_SPACING/n))
     end
     return absoluteWidths
+end
+
+function util.subdivideTable(oldTable, nKeep, nRemove, keepStartAndEnd)
+    local newTable = {}
+
+    if keepStartAndEnd then table.insert(newTable, oldTable[1]) end
+
+    for i, value in pairs(oldTable) do
+        if i % (nKeep + nRemove) < nKeep then
+            table.insert(newTable, value)
+        end
+    end
+
+    if keepStartAndEnd then table.insert(newTable, oldTable[#oldTable]) end
+
+    return newTable
 end

@@ -127,27 +127,51 @@ function gui.printVars(vars, title)
 end
 
 -- Plots will come once Quaver#1985 is merged
-function gui.svPlot(SVs)
+function gui.svPlot(SVs, title)
+    if SVs == nil or #SVs == 0 then return end
+
     local velocities = {}
     for _, SV in pairs(SVs) do
-        table.insert(velocities, SV.velocity)
+        table.insert(velocities, SV.Multiplier)
     end
-    imgui.PlotLines("SV Plot", velocities, #velocities)
+
+    gui.plot(velocities, title)
 end
 
--- Hyperlinks will word once Quaver#1986 is merged
+function gui.plot(values, title, valueAttribute)
+    if values == nil or #values == 0 then return end
+
+    local trueValues
+
+    if valueAttribute and values[1][valueAttribute] then
+        trueValues = {}
+        for _, value in pairs(values) do
+            table.insert(trueValues, value[valueAttribute])
+        end
+    else
+        trueValues = values
+    end
+
+    imgui.PushItemWidth(style.CONTENT_WIDTH)
+    imgui.PlotLines(title, trueValues, #trueValues)
+    imgui.PopItemWidth()
+end
+
 function gui.hyperlink(url, text)
     local hyperlinkColor = { 0.53, 0.66, 0.96, 1.00 }
+    imgui.TextColored(hyperlinkColor, text or url)
+    -- gui.underline
 
-    if text then
-        imgui.TextColored(hyperlinkColor, text)
-    else
-        imgui.TextColored(hyperlinkColor, url)
-    end
+    if imgui.IsItemClicked() then utils.OpenUrl(url, true) end
 
-    if imgui.IsItemHovered() then
-        if text then imgui.SetTooltip(url) end
-    end
+    if text then gui.tooltip(url) end
+end
+
+function gui.underline()
+    min = imgui.GetItemRectMin();
+    max = imgui.GetItemRectMax();
+    min.y = max.y;
+    imgui.GetWindowDrawList().AddLine(min, max);
 end
 
 -------------------------------------------------------------------------------------
@@ -258,7 +282,6 @@ function menu.linearSV()
         end
 
         gui.separator()
-
         gui.title("Utilities")
 
         imgui.PushItemWidth(style.CONTENT_WIDTH)
@@ -270,7 +293,6 @@ function menu.linearSV()
         _, vars["skipEndSV"] = imgui.Checkbox("Skip end SV?", vars["skipEndSV"])
 
         gui.separator()
-
         gui.title("CALCULATE")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
@@ -308,7 +330,8 @@ function menu.cubicBezierSV()
             averageSV = 1.0,
             intermediatePoints = 16,
             skipEndSV = false,
-            lastSVs = {}
+            lastSVs = {},
+            lastPositionValues = {}
         }
 
         util.retrieveStateVariables(menuID, vars)
@@ -378,7 +401,7 @@ function menu.cubicBezierSV()
         gui.title("Calculate")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
-            vars["lastSVs"] = sv.cubicBezier(
+            SVs, positionValues = sv.cubicBezier(
                 vars["x1"],
                 vars["y1"],
                 vars["x2"],
@@ -389,7 +412,19 @@ function menu.cubicBezierSV()
                 vars["intermediatePoints"],
                 vars["skipEndSV"]
             )
-            editor.placeSVs(vars["lastSVs"])
+
+            editor.placeSVs(SVs)
+            vars["lastSVs"] = SVs
+            vars["lastPositionValues"] = positionValues
+        end
+
+        if SVs then
+            gui.separator()
+            gui.title("Plots")
+
+            util.toString(positionValues, true)
+            gui.plot(positionValues, "Position Data", "y")
+            gui.plot(SVs, "Velocity Data", "Multiplier")
         end
 
         util.saveStateVariables(menuID, vars)
@@ -519,7 +554,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
 
     -- the larger this number, the more accurate the final sv is
     -- ... and the longer it's going to take
-    local totalSampleSize = 5000
+    local totalSampleSize = 2500
     local allBezierSamples = {}
     for t=0, 1, 1/totalSampleSize do
         local x = math.cubicBezier({0, P1_x, P2_x, 1}, t)
@@ -549,7 +584,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
         table.insert(SVs, utils.CreateScrollVelocity(endOffset, averageSV))
     end
 
-    return SVs
+    return SVs, util.subdivideTable(allBezierSamples, 1, 50, true)
 end
 
 -------------------------------------------------------------------------------------
@@ -568,15 +603,30 @@ function util.saveStateVariables(menuID, variables)
     end
 end
 
-function util.displayVal(label, value)
-    imgui.TextWrapped(string.format("%s: %s", label, tostring(value)))
+function util.printTable(table)
+    util.toString(table, true)
+    if table then
+        imgui.Columns(2)
+        imgui.Text("Key");   imgui.NextColumn();
+        imgui.Text("Value"); imgui.NextColumn();
+        imgui.Separator()
+        for key, value in pairs(table) do
+            util.toString(key, true)   imgui.NextColumn();
+            util.toString(value, true) imgui.NextColumn();
+        end
+        imgui.Columns(1)
+    end
 end
 
-function util.toString(var)
+function util.toString(var, print)
     local string = ""
-    string = var or "<null>"
-    if type(var) == "table" then string = "<list.length=".. #var ..">" end
-    if var == "" then string = "<empty string>" end
+
+    if var == nil then string = "<null>"
+    elseif type(var) == "table" then string = "<table.length=".. #var ..">"
+    elseif var == "" then string = "<empty string>"
+    else string = "<" .. type(var) .. "=" .. string .. ">" end
+
+    if print then imgui.Text(string) end
     return string
 end
 
@@ -587,6 +637,22 @@ function util.calcAbsoluteWidths(relativeWidths)
         table.insert(absoluteWidths, (value * style.CONTENT_WIDTH) - (style.SAMELINE_SPACING/n))
     end
     return absoluteWidths
+end
+
+function util.subdivideTable(oldTable, nKeep, nRemove, keepStartAndEnd)
+    local newTable = {}
+
+    if keepStartAndEnd then table.insert(newTable, oldTable[1]) end
+
+    for i, value in pairs(oldTable) do
+        if i % (nKeep + nRemove) < nKeep then
+            table.insert(newTable, value)
+        end
+    end
+
+    if keepStartAndEnd then table.insert(newTable, oldTable[#oldTable]) end
+
+    return newTable
 end
 
 -------------------------------------------------------------------------------------

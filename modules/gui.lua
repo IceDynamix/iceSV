@@ -86,25 +86,49 @@ function gui.printVars(vars, title)
 end
 
 -- Plots will come once Quaver#1985 is merged
-function gui.svPlot(SVs)
+function gui.svPlot(SVs, title)
+    if SVs == nil or #SVs == 0 then return end
+
     local velocities = {}
     for _, SV in pairs(SVs) do
-        table.insert(velocities, SV.velocity)
+        table.insert(velocities, SV.Multiplier)
     end
-    imgui.PlotLines("SV Plot", velocities, #velocities)
+
+    gui.plot(velocities, title)
 end
 
--- Hyperlinks will word once Quaver#1986 is merged
+function gui.plot(values, title, valueAttribute)
+    if values == nil or #values == 0 then return end
+
+    local trueValues
+
+    if valueAttribute and values[1][valueAttribute] then
+        trueValues = {}
+        for _, value in pairs(values) do
+            table.insert(trueValues, value[valueAttribute])
+        end
+    else
+        trueValues = values
+    end
+
+    imgui.PushItemWidth(style.CONTENT_WIDTH)
+    imgui.PlotLines(title, trueValues, #trueValues)
+    imgui.PopItemWidth()
+end
+
 function gui.hyperlink(url, text)
     local hyperlinkColor = { 0.53, 0.66, 0.96, 1.00 }
+    imgui.TextColored(hyperlinkColor, text or url)
+    -- gui.underline
 
-    if text then
-        imgui.TextColored(hyperlinkColor, text)
-    else
-        imgui.TextColored(hyperlinkColor, url)
-    end
+    if imgui.IsItemClicked() then utils.OpenUrl(url, true) end
 
-    if imgui.IsItemHovered() then
-        if text then imgui.SetTooltip(url) end
-    end
+    if text then gui.tooltip(url) end
+end
+
+function gui.underline()
+    min = imgui.GetItemRectMin();
+    max = imgui.GetItemRectMax();
+    min.y = max.y;
+    imgui.GetWindowDrawList().AddLine(min, max);
 end

@@ -43,7 +43,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
 
     -- the larger this number, the more accurate the final sv is
     -- ... and the longer it's going to take
-    local totalSampleSize = 5000
+    local totalSampleSize = 2500
     local allBezierSamples = {}
     for t=0, 1, 1/totalSampleSize do
         local x = math.cubicBezier({0, P1_x, P2_x, 1}, t)
@@ -73,5 +73,5 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
         table.insert(SVs, utils.CreateScrollVelocity(endOffset, averageSV))
     end
 
-    return SVs
+    return SVs, util.subdivideTable(allBezierSamples, 1, 50, true)
 end
