@@ -260,48 +260,48 @@ function menu.linearSV()
         gui.separator()
         gui.title("Velocities")
 
-        local velocities = { vars["startSV"], vars["endSV"] }
+        local velocities = { vars.startSV, vars.endSV }
         imgui.PushItemWidth(style.CONTENT_WIDTH)
         _, velocities = imgui.DragFloat2("Start/End Velocity", velocities, 0.01, -10.0, 10.0, "%.2fx")
         imgui.PopItemWidth()
-        vars["startSV"], vars["endSV"] = table.unpack(velocities)
+        vars.startSV, vars.endSV = table.unpack(velocities)
         gui.helpMarker("Ctrl+Click to enter as text!")
 
         local widths = util.calcAbsoluteWidths({0.7,0.3})
 
         if imgui.Button("Swap start and end velocity", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            vars["startSV"], vars["endSV"] = vars["endSV"], vars["startSV"]
+            vars.startSV, vars.endSV = vars.endSV, vars.startSV
         end
 
         imgui.SameLine(0, style.SAMELINE_SPACING)
 
         if imgui.Button("Reset", {widths[2], style.DEFAULT_WIDGET_HEIGHT}) then
-            vars["startSV"] = 1
-            vars["endSV"] = 1
+            vars.startSV = 1
+            vars.endSV = 1
         end
 
         gui.separator()
         gui.title("Utilities")
 
         imgui.PushItemWidth(style.CONTENT_WIDTH)
-        _, vars["intermediatePoints"] = imgui.InputInt("Intermediate points", vars["intermediatePoints"], 4)
+        _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
         imgui.PopItemWidth()
 
-        vars["intermediatePoints"] = math.clamp(vars["intermediatePoints"], 1, 500)
+        vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
 
-        _, vars["skipEndSV"] = imgui.Checkbox("Skip end SV?", vars["skipEndSV"])
+        _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
 
         gui.separator()
         gui.title("CALCULATE")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
             SVs = sv.linear(
-                vars["startSV"],
-                vars["endSV"],
-                vars["startOffset"],
-                vars["endOffset"],
-                vars["intermediatePoints"],
-                vars["skipEndSV"]
+                vars.startSV,
+                vars.endSV,
+                vars.startOffset,
+                vars.endOffset,
+                vars.intermediatePoints,
+                vars.skipEndSV
             )
             editor.placeSVs(SVs)
         end
@@ -330,7 +330,8 @@ function menu.cubicBezierSV()
             intermediatePoints = 16,
             skipEndSV = false,
             lastSVs = {},
-            lastPositionValues = {}
+            lastPositionValues = {},
+            stringInput = ""
         }
 
         util.retrieveStateVariables(menuID, vars)
@@ -348,16 +349,18 @@ function menu.cubicBezierSV()
 
         imgui.PushItemWidth(style.CONTENT_WIDTH)
 
-        local x = {vars["x1"],vars["x2"]}
+        _, vars.stringInput = imgui.InputText()
+
+        local x = {vars.x1,vars.x2}
         _, x = imgui.DragFloat2("x1, x2", x, 0.01, 0, 1, "%.2f")
-        vars["x1"], vars["x2"] = table.unpack(x)
+        vars.x1, vars.x2 = table.unpack(x)
 
-        local y = {vars["y1"],vars["y2"]}
+        local y = {vars.y1,vars.y2}
         _, y = imgui.DragFloat2("y1, y2", y, 0.01, -1, 2, "%.2f")
-        vars["y1"], vars["y2"] = table.unpack(y)
+        vars.y1, vars.y2 = table.unpack(y)
 
 
-        _, vars["averageSV"] = imgui.DragFloat("Average SV", vars["averageSV"], 0.01, -100, 100, "%.2f")
+        _, vars.averageSV = imgui.DragFloat("Average SV", vars.averageSV, 0.01, -100, 100, "%.2f")
 
         if imgui.Button("Reset") then
             --[[
@@ -376,11 +379,11 @@ function menu.cubicBezierSV()
                 end
             ]]
 
-            vars["x1"] = 0.35
-            vars["x2"] = 0.00
-            vars["y1"] = 0.65
-            vars["y2"] = 1.00
-            vars["averageSV"] = 1.0
+            vars.x1 = 0.35
+            vars.x2 = 0.00
+            vars.y1 = 0.65
+            vars.y2 = 1.00
+            vars.averageSV = 1.0
         end
 
         imgui.PopItemWidth()
@@ -389,32 +392,32 @@ function menu.cubicBezierSV()
         gui.title("Utilities")
 
         imgui.PushItemWidth(style.CONTENT_WIDTH)
-        _, vars["intermediatePoints"] = imgui.InputInt("Intermediate points", vars["intermediatePoints"], 4)
+        _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
         imgui.PopItemWidth()
 
-        vars["intermediatePoints"] = math.clamp(vars["intermediatePoints"], 1, 500)
+        vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
 
-        _, vars["skipEndSV"] = imgui.Checkbox("Skip end SV?", vars["skipEndSV"])
+        _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
 
         gui.separator()
         gui.title("Calculate")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
             SVs, positionValues = sv.cubicBezier(
-                vars["x1"],
-                vars["y1"],
-                vars["x2"],
-                vars["y2"],
-                vars["startOffset"],
-                vars["endOffset"],
-                vars["averageSV"],
-                vars["intermediatePoints"],
-                vars["skipEndSV"]
+                vars.x1,
+                vars.y1,
+                vars.x2,
+                vars.y2,
+                vars.startOffset,
+                vars.endOffset,
+                vars.averageSV,
+                vars.intermediatePoints,
+                vars.skipEndSV
             )
 
             editor.placeSVs(SVs)
-            vars["lastSVs"] = SVs
-            vars["lastPositionValues"] = positionValues
+            vars.lastSVs = SVs
+            vars.lastPositionValues = positionValues
         end
 
         if SVs then
