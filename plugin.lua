@@ -158,8 +158,7 @@ function gui.plot(values, title, valueAttribute)
 end
 
 function gui.hyperlink(url, text)
-    local hyperlinkColor = { 0.53, 0.66, 0.96, 1.00 }
-    imgui.TextColored(hyperlinkColor, text or url)
+    imgui.TextColored(style.HYPERLINK_COLOR, text or url)
     -- gui.underline
 
     if imgui.IsItemClicked() then utils.OpenUrl(url, true) end
@@ -421,8 +420,6 @@ function menu.cubicBezierSV()
         if SVs then
             gui.separator()
             gui.title("Plots")
-
-            util.toString(positionValues, true)
             gui.plot(positionValues, "Position Data", "y")
             gui.plot(SVs, "Velocity Data", "Multiplier")
         end
@@ -438,6 +435,7 @@ end
 style.SAMELINE_SPACING = 4
 style.CONTENT_WIDTH = 250
 style.DEFAULT_WIDGET_HEIGHT = 26
+style.HYPERLINK_COLOR = { 0.53, 0.66, 0.96, 1.00 }
 
 function style.applyStyle()
 

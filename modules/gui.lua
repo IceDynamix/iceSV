@@ -117,8 +117,7 @@ function gui.plot(values, title, valueAttribute)
 end
 
 function gui.hyperlink(url, text)
-    local hyperlinkColor = { 0.53, 0.66, 0.96, 1.00 }
-    imgui.TextColored(hyperlinkColor, text or url)
+    imgui.TextColored(style.HYPERLINK_COLOR, text or url)
     -- gui.underline
 
     if imgui.IsItemClicked() then utils.OpenUrl(url, true) end

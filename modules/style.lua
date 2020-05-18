@@ -1,6 +1,7 @@
 style.SAMELINE_SPACING = 4
 style.CONTENT_WIDTH = 250
 style.DEFAULT_WIDGET_HEIGHT = 26
+style.HYPERLINK_COLOR = { 0.53, 0.66, 0.96, 1.00 }
 
 function style.applyStyle()
 
