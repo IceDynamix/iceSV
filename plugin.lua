@@ -255,16 +255,26 @@ function menu.information()
         imgui.BulletText("Linear SV")
         gui.tooltip("Creates an SV gradient based on two points in time")
 
-        imgui.BulletText("Stutter SV")
-        gui.tooltip("Creates a normalized stutter effect")
+        -- imgui.BulletText("Stutter SV")
+        -- gui.tooltip("Creates a normalized stutter effect")
+
+        imgui.BulletText("Cubic Bezier")
+        gui.tooltip("Creates velocity points for a path defined by a cubic bezier curve")
 
         gui.separator()
         gui.title("About")
 
-        gui.hyperlink("https://github.com/IceDynamix/IceSV", "Github")
-        imgui.TextWrapped("Created by IceDynamix")
-        imgui.TextWrapped("Heavily inspired by Evening's re:amber")
+        imgui.Columns(2)
+
+        imgui.Text("Github Repository");                                                imgui.NextColumn();
+        gui.hyperlink("https://github.com/IceDynamix/IceSV", "IceDynamix/IceSV");       imgui.NextColumn();
+        imgui.TextWrapped("Created by");                                                imgui.NextColumn();
+        gui.hyperlink("https://github.com/IceDynamix/", "IceDynamix");                  imgui.NextColumn();
+        imgui.TextWrapped("Heavily inspired by");                                       imgui.NextColumn();
+        gui.hyperlink("https://github.com/Eve-ning/reamber", "Evening's re:amber")      imgui.NextColumn();
         gui.tooltip("let's be real this is basically a direct quaver port")
+
+        imgui.Columns(1)
         imgui.EndTabItem()
     end
 end
