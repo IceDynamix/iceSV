@@ -25,15 +25,15 @@ function util.printTable(table)
     end
 end
 
-function util.toString(var, print)
+function util.toString(var, imguiText)
     local string = ""
 
     if var == nil then string = "<null>"
     elseif type(var) == "table" then string = "<table.length=".. #var ..">"
     elseif var == "" then string = "<empty string>"
-    else string = "<" .. type(var) .. "=" .. string .. ">" end
+    else string = "<" .. type(var) .. "=" .. var .. ">" end
 
-    if print then imgui.Text(string) end
+    if imguiText then imgui.Text(string) end
     return string
 end
 
@@ -59,5 +59,17 @@ function util.subdivideTable(oldTable, nKeep, nRemove, keepStartAndEnd)
 
     if keepStartAndEnd then table.insert(newTable, oldTable[#oldTable]) end
 
+    return newTable
+end
+
+function util.mapFunctionToTable(oldTable, func, params)
+    local newTable = {}
+    for _, value in pairs(oldTable) do
+        if params then
+            table.insert(newTable, func(value, table.unpack(params)))
+        else
+            table.insert(newTable, func(value))
+        end
+    end
     return newTable
 end

@@ -70,13 +70,7 @@ function menu.linearSV()
         gui.separator()
         gui.title("Utilities")
 
-        imgui.PushItemWidth(style.CONTENT_WIDTH)
-        _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
-        imgui.PopItemWidth()
-
-        vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
-
-        _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
+        gui.intermediatePoints(vars)
 
         gui.separator()
         gui.title("CALCULATE")
@@ -118,8 +112,11 @@ function menu.cubicBezierSV()
             skipEndSV = false,
             lastSVs = {},
             lastPositionValues = {},
-            stringInput = ""
+            stringInput = "cubic-bezier(.35,.0,.65,1)"
         }
+
+        local xBounds = { 0.0, 1.0}
+        local yBounds = {-1.0, 2.0}
 
         util.retrieveStateVariables(menuID, vars)
 
@@ -134,63 +131,71 @@ function menu.cubicBezierSV()
         gui.separator()
         gui.title("Values")
 
-        imgui.PushItemWidth(style.CONTENT_WIDTH)
+        local widths = util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
 
-        _, vars.stringInput = imgui.InputText()
-
-        local x = {vars.x1,vars.x2}
-        _, x = imgui.DragFloat2("x1, x2", x, 0.01, 0, 1, "%.2f")
-        vars.x1, vars.x2 = table.unpack(x)
-
-        local y = {vars.y1,vars.y2}
-        _, y = imgui.DragFloat2("y1, y2", y, 0.01, -1, 2, "%.2f")
-        vars.y1, vars.y2 = table.unpack(y)
-
-
-        _, vars.averageSV = imgui.DragFloat("Average SV", vars.averageSV, 0.01, -100, 100, "%.2f")
-
-        if imgui.Button("Reset") then
-            --[[
-                I tried to implement a function where it takes the default values
-                but it seems that I'm unsuccessful in deep-copying the table
-
-                Something like this:
-
-                function util.resetToDefaultValues(currentVars, defaultVars, varsToReset)
-                    for _, key in pairs(varsToReset) do
-                        if currentVars[key] and defaultVars[key] then
-                            currentVars[key] = defaultVars[key]
-                        end
-                    end
-                    return currentVars
-                end
-            ]]
-
-            vars.x1 = 0.35
-            vars.x2 = 0.00
-            vars.y1 = 0.65
-            vars.y2 = 1.00
-            vars.averageSV = 1.0
+        if imgui.Button("Parse", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            local regex = "(-?%d*%.?%d+)"
+            captures = {}
+            for capture, _ in string.gmatch(vars.stringInput, regex) do
+                statusMessage = statusMessage .. "," .. capture
+                table.insert(captures, tonumber(capture))
+            end
+            if #captures >= 4 then
+                vars.x1, vars.y1, vars.x2, vars.y2  = table.unpack(captures)
+                statusMessage = "Copied values"
+            else
+                statusMessage = "Invalid string"
+            end
         end
 
+        imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        imgui.PushItemWidth(widths[2])
+        _, vars.stringInput = imgui.InputText("String", vars.stringInput, 50, 4112)
         imgui.PopItemWidth()
+
+        imgui.SameLine()
+        imgui.TextDisabled("(?)")
+        if imgui.IsItemHovered() then
+            imgui.BeginTooltip()
+            imgui.TextWrapped("Examples:")
+            gui.bulletList({
+                "cubic-bezier(.35,.0,.65,1)",
+                ".17,.67,.83,.67",
+                "https://cubic-bezier.com/#.76,-0.17,.63,1.35"
+            })
+            imgui.TextWrapped("Or anything else that has 4 numbers")
+            imgui.EndTooltip()
+        end
+
+        imgui.PushItemWidth(style.CONTENT_WIDTH)
+
+        local coords = {}
+        _, coords = imgui.DragFloat4("x1, y1, x2, y2", {vars.x1, vars.y1, vars.x2, vars.y2}, 0.01, -5, 5, "%.2f")
+        vars.y2, vars.x1, vars.y1, vars.x2 = table.unpack(coords) -- the coords returned are in this order for some stupid reason??
+        imgui.PopItemWidth()
+
+        gui.helpMarker("x: 0.0-1.0\ny: -1.0-2.0")
+
+        -- Set limits here instead of in the DragFloat4, since this also covers the parsed string
+        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, math.clamp, xBounds))
+        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, math.clamp, yBounds))
+
+        imgui.Dummy({0,10})
+
+        gui.averageSV(vars, widths)
 
         gui.separator()
         gui.title("Utilities")
 
-        imgui.PushItemWidth(style.CONTENT_WIDTH)
-        _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
-        imgui.PopItemWidth()
-
-        vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
-
-        _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
+        gui.intermediatePoints(vars)
 
         gui.separator()
         gui.title("Calculate")
 
-        if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
-            SVs, positionValues = sv.cubicBezier(
+        if imgui.Button("Insert into map ", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
+            statusMessage = "pressed"
+            vars.lastSVs, vars.lastPositionValues = sv.cubicBezier(
                 vars.x1,
                 vars.y1,
                 vars.x2,
@@ -202,18 +207,18 @@ function menu.cubicBezierSV()
                 vars.skipEndSV
             )
 
-            editor.placeSVs(SVs)
-            vars.lastSVs = SVs
-            vars.lastPositionValues = positionValues
+            editor.placeSVs(vars.lastSVs)
         end
 
-        if SVs then
+        if vars.lastSVs then
             gui.separator()
             gui.title("Plots")
-            gui.plot(positionValues, "Position Data", "y")
-            gui.plot(SVs, "Velocity Data", "Multiplier")
+            gui.plot(vars.lastPositionValues, "Position Data", "y")
+            gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
         util.saveStateVariables(menuID, vars)
+
+        imgui.EndTabItem()
     end
 end

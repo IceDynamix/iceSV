@@ -23,7 +23,7 @@ end
 function math.round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
 
 function math.clamp(x, min, max)
-    if x > max then x = max end
     if x < min then x = min end
+    if x > max then x = max end
     return x
 end

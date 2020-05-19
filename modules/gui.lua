@@ -85,18 +85,6 @@ function gui.printVars(vars, title)
     end
 end
 
--- Plots will come once Quaver#1985 is merged
-function gui.svPlot(SVs, title)
-    if SVs == nil or #SVs == 0 then return end
-
-    local velocities = {}
-    for _, SV in pairs(SVs) do
-        table.insert(velocities, SV.Multiplier)
-    end
-
-    gui.plot(velocities, title)
-end
-
 function gui.plot(values, title, valueAttribute)
     if values == nil or #values == 0 then return end
 
@@ -130,4 +118,51 @@ function gui.underline()
     max = imgui.GetItemRectMax();
     min.y = max.y;
     imgui.GetWindowDrawList().AddLine(min, max);
+end
+
+function gui.bulletList(listOfLines)
+    if type(listOfLines) ~= "table" then return end
+    for _, line in pairs(listOfLines) do
+        imgui.BulletText(line)
+    end
+end
+
+
+function gui.averageSV(vars, widths)
+    local newWidths = widths or util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
+
+    if imgui.Button("Reset", {newWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        --[[
+            I tried to implement a function where it takes the default values
+            but it seems that I'm unsuccessful in deep-copying the table
+
+            Something like this:
+
+            function util.resetToDefaultValues(currentVars, defaultVars, varsToReset)
+                for _, key in pairs(varsToReset) do
+                    if currentVars[key] and defaultVars[key] then
+                        currentVars[key] = defaultVars[key]
+                    end
+                end
+                return currentVars
+            end
+        ]]
+        vars.averageSV = 1.0
+        statusMessage = "Reset average SV"
+    end
+
+    imgui.SameLine(0, style.SAMELINE_SPACING)
+
+    imgui.PushItemWidth(newWidths[2])
+    _, vars.averageSV = imgui.DragFloat("Average SV", vars.averageSV, 0.01, -100, 100, "%.2fx")
+    imgui.PopItemWidth()
+end
+
+function gui.intermediatePoints(vars)
+    imgui.PushItemWidth(style.CONTENT_WIDTH)
+    _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
+    imgui.PopItemWidth()
+
+    vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
+    _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
 end
