@@ -292,7 +292,8 @@ function menu.linearSV()
             intermediatePoints = 16,
             startOffset = 0,
             endOffset = 0,
-            skipEndSV = false
+            skipEndSV = false,
+            lastSVs = {}
         }
 
         util.retrieveStateVariables(menuID, vars)
@@ -334,7 +335,7 @@ function menu.linearSV()
         gui.title("CALCULATE")
 
         if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
-            SVs = sv.linear(
+            vars.lastSVs = sv.linear(
                 vars.startSV,
                 vars.endSV,
                 vars.startOffset,
@@ -342,7 +343,13 @@ function menu.linearSV()
                 vars.intermediatePoints,
                 vars.skipEndSV
             )
-            editor.placeSVs(SVs)
+            editor.placeSVs(vars.lastSVs)
+        end
+
+        if #vars.lastSVs > 0 then
+            gui.separator()
+            gui.title("Plots")
+            gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
         -- Save variables
