@@ -475,7 +475,7 @@ function menu.cubicBezierSV()
             editor.placeSVs(vars.lastSVs)
         end
 
-        if vars.lastSVs then
+        if #vars.lastSVs > 0 then
             gui.separator()
             gui.title("Plots")
             gui.plot(vars.lastPositionValues, "Position Data", "y")
@@ -731,7 +731,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.5.19"
+    statusMessage = state.GetValue("statusMessage") or "b2020.5.20"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
