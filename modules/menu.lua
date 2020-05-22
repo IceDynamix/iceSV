@@ -111,6 +111,45 @@ function menu.linearSV()
     end
 end
 
+function menu.stutterSV()
+    if imgui.BeginTabItem("Stutter SV") then
+        local menuID = "stutter"
+        local vars = {
+            fixedLengthBox = false,
+            fixedLengthValue = 0.25,
+            skipEndSV = false,
+            startSV = 2.0,
+            duration = 0.5,
+        }
+        util.retrieveStateVariables(menuID, vars)
+
+        _, vars.fixedLengthBox = imgui.Checkbox("Fixed length", vars.fixedLengthBox)
+        gui.helpMarker("Uses a fixed length for every stutter instead of scaling with the distance between each note")
+
+        if vars.fixedLengthBox then
+            imgui.SameLine()
+            imgui.PushItemWidth(imgui.GetWindowWidth() * 0.45)
+            _, vars.fixedLengthValue = imgui.InputFloat("Length", vars.fixedLengthValue)
+            imgui.PopItemWidth()
+        end
+
+        _, vars.startSV = imgui.SliderFloat("Start velocity", vars.startSV, -10.0, 10.0)
+        gui.helpMarker("Ctrl+Click on a slider to enter as text!")
+
+        _, vars.duration = imgui.SliderFloat("Duration", vars.duration, 0.0, 1.0)
+        _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
+
+        if imgui.Button("Insert into map") then
+            -- sv_stutter
+            statusMessage = "Not implemented yet"
+        end
+
+
+        util.saveStateVariables(menuID, vars)
+        imgui.EndTabItem()
+    end
+end
+
 function menu.cubicBezierSV()
 
     local menuID = "cubicBezier"
