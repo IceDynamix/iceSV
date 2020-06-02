@@ -8,10 +8,10 @@
 
 ## Features
 
-<details>
-    <summary>Linear SV</summary>
-    <video controls src="https://puu.sh/FLv8C/df287e6292.mp4" width=50%></video>
-</details>
+- Linear SV
+- Stutter SV
+- Cubic Bezier
+- SV Range Editor (planned)
 
 ## Instructions on installing the plugin
 
@@ -24,7 +24,7 @@ The workshop has yet to be implemented, so please follow these steps
 
 ## Documentation
 
-[iceSV Wiki](https://github.com/IceDynamix/iceSV/wiki)
+[iceSV Wiki](https://github.com/IceDynamix/iceSV/wiki) (in progress)
 
 ## Related information
 
