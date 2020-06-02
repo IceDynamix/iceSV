@@ -35,12 +35,34 @@ function editor.placeSVs(SVs)
     statusMessage = "Inserted " .. #SVs .. " SV points!"
 end
 
+editor.typeAttributes = {
+    -- SV
+    [0] = {
+        "StartTime",
+        "Multiplier"
+    },
+    -- "Note"
+    [1] = {
+        "StartTime",
+        "Lane",
+        "EndTime",
+        -- "HitSound", left out because there's some trouble with comparing hitsound values
+        "EditorLayer"
+    },
+    -- BPM
+    [2] = {
+        "StartTime",
+        "Bpm",
+        -- "Signature", same reason
+    }
+}
+
 -------------------------------------------------------------------------------------
 -- modules\gui.lua
 -------------------------------------------------------------------------------------
 
-function gui.title(title, sep)
-    if sep then
+function gui.title(title, skipSeparator)
+    if not skipSeparator then
         gui.spacing()
         imgui.Separator()
     end
@@ -224,7 +246,7 @@ function gui.intermediatePoints(vars)
 end
 
 function gui.insertButton()
-    return imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT})
+    return imgui.Button("Insert into map", style.FULLSIZE_WIDGET_SIZE)
 end
 
 -------------------------------------------------------------------------------------
@@ -267,7 +289,7 @@ end
 
 function menu.information()
     if imgui.BeginTabItem("Information") then
-        gui.title("Help")
+        gui.title("Help", true)
 
         imgui.TextWrapped("Hover over each function for an explanation")
 
@@ -280,7 +302,7 @@ function menu.information()
         imgui.BulletText("Cubic Bezier")
         gui.tooltip("Creates velocity points for a path defined by a cubic bezier curve")
 
-        gui.title("About", true)
+        gui.title("About")
 
         imgui.Columns(2)
 
@@ -303,7 +325,7 @@ function menu.linearSV()
 
     local menuID = "linear"
 
-    if imgui.BeginTabItem("Linear SV") then
+    if imgui.BeginTabItem("Linear") then
 
         -- Initialize variables
         local vars = {
@@ -320,10 +342,10 @@ function menu.linearSV()
 
         -- Create UI Elements
 
-        gui.title("Offset")
+        gui.title("Offset", true)
         gui.startEndOffset(vars)
 
-        gui.title("Velocities", true)
+        gui.title("Velocities")
 
         local velocities = { vars.startSV, vars.endSV }
         imgui.PushItemWidth(style.CONTENT_WIDTH)
@@ -345,11 +367,11 @@ function menu.linearSV()
             vars.endSV = 1
         end
 
-        gui.title("Utilities", true)
+        gui.title("Utilities")
 
         gui.intermediatePoints(vars)
 
-        gui.title("Calculate", true)
+        gui.title("Calculate")
 
         if gui.insertButton() then
             vars.lastSVs = sv.linear(
@@ -364,7 +386,7 @@ function menu.linearSV()
         end
 
         if #vars.lastSVs > 0 then
-            gui.title("Plots", true)
+            gui.title("Plots")
             gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
@@ -376,7 +398,7 @@ function menu.linearSV()
 end
 
 function menu.stutterSV()
-    if imgui.BeginTabItem("Stutter SV") then
+    if imgui.BeginTabItem("Stutter") then
         local menuID = "stutter"
         local vars = {
             skipEndSV = false,
@@ -391,11 +413,11 @@ function menu.stutterSV()
         }
         util.retrieveStateVariables(menuID, vars)
 
-        gui.title("Note")
+        gui.title("Note", true)
 
         imgui.Text("Select some hitobjects and play around!")
 
-        gui.title("Settings", true)
+        gui.title("Settings")
 
         local modes = {
             "Distance between notes",
@@ -474,7 +496,7 @@ function menu.stutterSV()
             "value, where the projected equalize SV would be start to become negative."
         )
 
-        gui.title("Calculate", true)
+        gui.title("Calculate")
 
         if gui.insertButton() then
             local offsets = {}
@@ -488,7 +510,7 @@ function menu.stutterSV()
             elseif #offsets == 1 then
                 statusMessage = "Needs hitobjects on different offsets selected!"
             else
-                offsets = util.unique(offsets)
+                offsets = util.uniqueBy(offsets)
 
                 vars.lastSVs = sv.stutter(
                     table.sort(offsets),
@@ -540,14 +562,14 @@ function menu.cubicBezierSV()
 
         util.retrieveStateVariables(menuID, vars)
 
-        gui.title("Note")
+        gui.title("Note", true)
         gui.hyperlink("https://cubic-bezier.com/")
 
-        gui.title("Offset", true)
+        gui.title("Offset")
 
         gui.startEndOffset(vars)
 
-        gui.title("Values", true)
+        gui.title("Values")
 
         local widths = util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
 
@@ -603,11 +625,11 @@ function menu.cubicBezierSV()
 
         gui.averageSV(vars, widths)
 
-        gui.title("Utilities", true)
+        gui.title("Utilities")
 
         gui.intermediatePoints(vars)
 
-        gui.title("Calculate", true)
+        gui.title("Calculate")
 
         if gui.insertButton() then
             statusMessage = "pressed"
@@ -627,13 +649,135 @@ function menu.cubicBezierSV()
         end
 
         if #vars.lastSVs > 0 then
-            gui.title("Plots", true)
+            gui.title("Plots")
             gui.plot(vars.lastPositionValues, "Position Data", "y")
             gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
         util.saveStateVariables(menuID, vars)
 
+        imgui.EndTabItem()
+    end
+end
+
+function menu.rangeEditor()
+    if imgui.BeginTabItem("Range Editor") then
+        local menuID = "range"
+        local vars = {
+            startOffset = 0,
+            endOffset = 0,
+            selections = {
+                [0] = {},
+                [1] = {},
+                [2] = {}
+            },
+            type = 0,
+            windowSelectedOpen = false,
+        }
+
+        util.retrieveStateVariables(menuID, vars)
+
+        gui.title("Type", true)
+
+        local selectableTypes = {
+            "SVs",
+            "Notes",
+            "BPM Points"
+        }
+
+        imgui.PushItemWidth(style.CONTENT_WIDTH)
+        _, vars.type = imgui.Combo("Selection Type", vars.type, selectableTypes, #selectableTypes)
+        imgui.PopItemWidth()
+
+        gui.title("Range")
+        gui.startEndOffset(vars)
+
+        gui.title("Selection")
+
+        local buttonWidths = util.calcAbsoluteWidths({0.5, 0.5})
+
+        local addRangeButtonWidth
+
+        if #vars.selections[vars.type] > 0 then
+            addRangeButtonWidth = buttonWidths[1]
+        else
+            addRangeButtonWidth = style.CONTENT_WIDTH
+        end
+
+        if imgui.Button("Add range", {addRangeButtonWidth, style.DEFAULT_WIDGET_HEIGHT}) then
+            local elements = {
+                [0] = map.ScrollVelocities,
+                [1] = map.HitObjects,
+                [2] = map.TimingPoints
+            }
+
+            local previousCount = #vars.selections[vars.type]
+
+            -- Find
+            local newElements = util.filter(
+                elements[vars.type],
+                function(i, element)
+                    return      element.StartTime >= vars.startOffset
+                            and element.StartTime <= vars.endOffset
+                end
+            )
+
+            -- Add
+            newElements = util.mergeUnique(
+                vars.selections[vars.type],
+                newElements,
+                editor.typeAttributes[vars.type]
+            )
+
+            -- Sort
+            newElements = table.sort(
+                newElements,
+                function(a,b) return a.StartTime < b.StartTime end
+            )
+
+            vars.selections[vars.type] = newElements
+
+            statusMessage = string.format(
+                "Added %s %s",
+                #vars.selections[vars.type] - previousCount,
+                selectableTypes[vars.type + 1]
+            )
+        end
+
+        if #vars.selections[vars.type] > 0 then
+            imgui.SameLine(0, style.SAMELINE_SPACING)
+
+            if imgui.Button("Remove range", {buttonWidths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+                vars.selections[vars.type] = util.filter(
+                    vars.selections[vars.type],
+                    function(i, element)
+                        return not (
+                            element.StartTime >= vars.startOffset
+                            and element.StartTime <= vars.endOffset
+                        )
+                    end
+                )
+            end
+
+            imgui.SameLine(0, style.SAMELINE_SPACING)
+            imgui.Text(string.format("%s %s in selection", #vars.selections[vars.type], selectableTypes[vars.type + 1]))
+
+            if imgui.Button("Clear selection", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+                vars.selections[vars.type] = {}
+            end
+
+            imgui.SameLine(0, style.SAMELINE_SPACING)
+
+            if imgui.Button("Toggle window", {buttonWidths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+                vars.windowSelectedOpen = not vars.windowSelectedOpen
+            end
+
+            if vars.windowSelectedOpen then
+                window.selectedRange(vars)
+            end
+        end
+
+        util.saveStateVariables(menuID, vars)
         imgui.EndTabItem()
     end
 end
@@ -647,6 +791,7 @@ style.CONTENT_WIDTH = 250
 style.DEFAULT_WIDGET_HEIGHT = 26
 style.HYPERLINK_COLOR = { 0.53, 0.66, 0.96, 1.00 }
 style.BUTTON_WIDGET_RATIOS = { 0.3, 0.7 }
+style.FULLSIZE_WIDGET_SIZE = {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}
 
 function style.applyStyle()
 
@@ -910,18 +1055,57 @@ function util.mapFunctionToTable(oldTable, func, params)
     return newTable
 end
 
-function util.unique(table)
+function util.uniqueBy(t, attribute)
     local hash = {}
     local res = {}
 
-    for _,v in ipairs(table) do
-        if (not hash[v]) then
+    for _,v in ipairs(t) do
+
+        local key
+        if attribute then
+            key = v[attribute]
+        else
+            key = v
+        end
+
+        if (not hash[key]) then
             res[#res+1] = v
-            hash[v] = true
+            hash[key] = true
         end
     end
 
     return res
+end
+
+function util.filter(t, condition)
+    local filtered = {}
+    for key, value in pairs(t) do
+        if condition(key, value) then table.insert(filtered, value) end
+    end
+    return filtered
+end
+
+function util.mergeUnique(t1, t2, keysToCompare)
+    local hash = {}
+    local newTable = {}
+
+    for _, t in pairs({t1, t2}) do
+        for _, element in pairs(t) do
+            -- You can't directly set the table as the hash value, since tables
+            -- are compared by reference and everything with tables is pass by reference
+            local hashValue = ""
+            for _, key in pairs(keysToCompare) do
+                hashValue = hashValue .. element[key] .. "|"
+            end
+
+            if not hash[hashValue] then
+                table.insert(newTable, element)
+                hash[hashValue] = true
+            end
+        end
+    end
+
+    return newTable
 end
 
 -------------------------------------------------------------------------------------
@@ -929,7 +1113,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.6.2"
+    statusMessage = state.GetValue("statusMessage") or "b2020.6.3"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
@@ -938,7 +1122,7 @@ function window.svMenu()
     menu.linearSV()
     menu.stutterSV()
     menu.cubicBezierSV()
-    -- menu.editSVRange()
+    menu.rangeEditor()
     -- menu.BpmGradient()
     imgui.EndTabBar()
 
@@ -954,6 +1138,46 @@ function window.svMenu()
     state.SetValue("statusMessage", statusMessage)
 end
 
+function window.selectedRange(vars)
+    imgui.SetNextWindowSize({100 * #editor.typeAttributes[vars.type], 500})
+
+    imgui.Begin("Selected elements", true, imgui_window_flags.AlwaysAutoResize)
+        if imgui.Button("Close Window") then
+            vars.windowSelectedOpen = false
+        end
+        imgui.Columns(#editor.typeAttributes[vars.type])
+
+        for _, value in pairs(editor.typeAttributes[vars.type]) do
+            imgui.Text(value)
+            imgui.NextColumn()
+        end
+        imgui.Separator()
+
+        for _, element in pairs(vars.selections[vars.type]) do
+            for _, attribute in pairs(editor.typeAttributes[vars.type]) do
+
+                -- TODO: Implememt selection select (as stupid as it sounds)
+                local value = element[attribute] or "null"
+                local string = "null"
+
+                if type(value) == "number" then
+                    string = string.gsub(string.format("%.2f", value), "%.00", "", 1)
+
+                elseif value then -- not nil
+                    string = "userdata"
+
+                end
+
+                imgui.Text(string)
+                imgui.NextColumn()
+            end
+        end
+
+        imgui.Columns(1)
+        state.IsWindowHovered = imgui.IsWindowHovered()
+    imgui.End()
+end
+
 -------------------------------------------------------------------------------------
 -- modules\_main.lua
 -------------------------------------------------------------------------------------
@@ -965,6 +1189,7 @@ end
 -- MAIN ------------------------------------------------------
 
 function draw()
+    imgui.ShowDemoWindow()
     style.applyStyle()
     window.svMenu()
 end

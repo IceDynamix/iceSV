@@ -3,6 +3,7 @@ style.CONTENT_WIDTH = 250
 style.DEFAULT_WIDGET_HEIGHT = 26
 style.HYPERLINK_COLOR = { 0.53, 0.66, 0.96, 1.00 }
 style.BUTTON_WIDGET_RATIOS = { 0.3, 0.7 }
+style.FULLSIZE_WIDGET_SIZE = {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}
 
 function style.applyStyle()
 

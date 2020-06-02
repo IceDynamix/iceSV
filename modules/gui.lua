@@ -1,5 +1,5 @@
-function gui.title(title, sep)
-    if sep then
+function gui.title(title, skipSeparator)
+    if not skipSeparator then
         gui.spacing()
         imgui.Separator()
     end
@@ -183,5 +183,5 @@ function gui.intermediatePoints(vars)
 end
 
 function gui.insertButton()
-    return imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT})
+    return imgui.Button("Insert into map", style.FULLSIZE_WIDGET_SIZE)
 end
