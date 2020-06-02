@@ -1,16 +1,30 @@
-function gui.title(title)
-    imgui.Dummy({0,5})
+function gui.title(title, sep)
+    if sep then
+        gui.spacing()
+        imgui.Separator()
+    end
+    gui.spacing()
     imgui.Text(string.upper(title))
-    imgui.Dummy({0,5})
+    gui.spacing()
 end
 
 function gui.separator()
-    imgui.Dummy({0,5})
+    gui.spacing()
     imgui.Separator()
 end
 
+function gui.spacing()
+    imgui.Dummy({0,5})
+end
+
 function gui.tooltip(text)
-    if imgui.IsItemHovered() then imgui.SetTooltip(text) end
+    if imgui.IsItemHovered() then
+        imgui.BeginTooltip()
+        imgui.PushTextWrapPos(imgui.GetFontSize() * 25)
+        imgui.Text(text)
+        imgui.PopTextWrapPos()
+        imgui.EndTooltip()
+    end
 end
 
 function gui.helpMarker(text)
@@ -165,4 +179,8 @@ function gui.intermediatePoints(vars)
 
     vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
     _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
+end
+
+function gui.insertButton()
+    return imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT})
 end

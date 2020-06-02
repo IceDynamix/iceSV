@@ -18,8 +18,8 @@ function util.printTable(table)
         imgui.Text("Value"); imgui.NextColumn();
         imgui.Separator()
         for key, value in pairs(table) do
-            util.toString(key, true)   imgui.NextColumn();
-            util.toString(value, true) imgui.NextColumn();
+            util.toString(key, true);   imgui.NextColumn();
+            util.toString(value, true); imgui.NextColumn();
         end
         imgui.Columns(1)
     end
@@ -72,4 +72,18 @@ function util.mapFunctionToTable(oldTable, func, params)
         end
     end
     return newTable
+end
+
+function util.unique(table)
+    local hash = {}
+    local res = {}
+
+    for _,v in ipairs(table) do
+        if (not hash[v]) then
+            res[#res+1] = v
+            hash[v] = true
+        end
+    end
+
+    return res
 end

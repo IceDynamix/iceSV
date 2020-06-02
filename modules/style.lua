@@ -25,6 +25,8 @@ function style.applyStyle()
     imgui.PushStyleColor(   imgui_col.Tab,                     { 0.30, 0.33 ,0.38, 0.86 })
     imgui.PushStyleColor(   imgui_col.TabHovered,              { 0.67, 0.71 ,0.75, 0.80 })
     imgui.PushStyleColor(   imgui_col.TabActive,               { 0.39, 0.65 ,0.74, 1.00 })
+    imgui.PushStyleColor(   imgui_col.SliderGrab,              { 0.39, 0.65 ,0.74, 1.00 })
+    imgui.PushStyleColor(   imgui_col.SliderGrabActive,        { 0.39, 0.65 ,0.74, 1.00 })
 
     -- VALUES
 
