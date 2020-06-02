@@ -7,23 +7,24 @@ function menu.information()
         imgui.BulletText("Linear SV")
         gui.tooltip("Creates an SV gradient based on two points in time")
 
-        -- imgui.BulletText("Stutter SV")
-        -- gui.tooltip("Creates a normalized stutter effect")
+        imgui.BulletText("Stutter SV")
+        gui.tooltip("Creates a normalized stutter effect with start, equalize and end SV")
 
         imgui.BulletText("Cubic Bezier")
         gui.tooltip("Creates velocity points for a path defined by a cubic bezier curve")
 
-        gui.separator()
-        gui.title("About")
+        gui.title("About", true)
 
         imgui.Columns(2)
 
-        imgui.Text("Github Repository");                                                imgui.NextColumn();
-        gui.hyperlink("https://github.com/IceDynamix/IceSV", "IceDynamix/IceSV");       imgui.NextColumn();
-        imgui.TextWrapped("Created by");                                                imgui.NextColumn();
-        gui.hyperlink("https://github.com/IceDynamix/", "IceDynamix");                  imgui.NextColumn();
-        imgui.TextWrapped("Heavily inspired by");                                       imgui.NextColumn();
-        gui.hyperlink("https://github.com/Eve-ning/reamber", "Evening's re:amber")      imgui.NextColumn();
+        imgui.Text("iceSV Wiki (in progress)");                                                 imgui.NextColumn();
+        gui.hyperlink("https://github.com/IceDynamix/iceSV/wiki", "IceDynamix/iceSV/wiki");     imgui.NextColumn();
+        imgui.Text("Github Repository");                                                        imgui.NextColumn();
+        gui.hyperlink("https://github.com/IceDynamix/iceSV", "IceDynamix/iceSV");               imgui.NextColumn();
+        imgui.TextWrapped("Created by");                                                        imgui.NextColumn();
+        gui.hyperlink("https://github.com/IceDynamix/", "IceDynamix");                          imgui.NextColumn();
+        imgui.TextWrapped("Heavily inspired by");                                               imgui.NextColumn();
+        gui.hyperlink("https://github.com/Eve-ning/reamber", "Evening's re:amber")              imgui.NextColumn();
         gui.tooltip("let's be real this is basically a direct quaver port")
 
         imgui.Columns(1)
@@ -55,8 +56,7 @@ function menu.linearSV()
         gui.title("Offset")
         gui.startEndOffset(vars)
 
-        gui.separator()
-        gui.title("Velocities")
+        gui.title("Velocities", true)
 
         local velocities = { vars.startSV, vars.endSV }
         imgui.PushItemWidth(style.CONTENT_WIDTH)
@@ -78,15 +78,13 @@ function menu.linearSV()
             vars.endSV = 1
         end
 
-        gui.separator()
-        gui.title("Utilities")
+        gui.title("Utilities", true)
 
         gui.intermediatePoints(vars)
 
-        gui.separator()
-        gui.title("CALCULATE")
+        gui.title("Calculate", true)
 
-        if imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
+        if gui.insertButton() then
             vars.lastSVs = sv.linear(
                 vars.startSV,
                 vars.endSV,
@@ -99,12 +97,150 @@ function menu.linearSV()
         end
 
         if #vars.lastSVs > 0 then
-            gui.separator()
-            gui.title("Plots")
+            gui.title("Plots", true)
             gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
         -- Save variables
+        util.saveStateVariables(menuID, vars)
+
+        imgui.EndTabItem()
+    end
+end
+
+function menu.stutterSV()
+    if imgui.BeginTabItem("Stutter SV") then
+        local menuID = "stutter"
+        local vars = {
+            skipEndSV = false,
+            skipFinalEndSV = false,
+            startSV = 1.5,
+            duration = 0.5,
+            averageSV = 1.0,
+            lastSVs = {},
+            allowNegativeValues = false,
+            effectDurationMode = 0,
+            effectDurationValue = 1
+        }
+        util.retrieveStateVariables(menuID, vars)
+
+        gui.title("Note")
+
+        imgui.Text("Select some hitobjects and play around!")
+
+        gui.title("Settings", true)
+
+        local modes = {
+            "Distance between notes",
+            "BPM/measure snap",
+            "Absolute length"
+        }
+
+        imgui.PushItemWidth(style.CONTENT_WIDTH)
+        _, vars.effectDurationMode = imgui.Combo("Effect duration mode", vars.effectDurationMode, modes, #modes)
+        imgui.PopItemWidth()
+
+        gui.helpMarker("This determines the effect duration of a single stutter. Hover over the help marker input box in each mode to find out more.")
+
+        local helpMarkerText = ""
+
+        imgui.PushItemWidth(style.CONTENT_WIDTH)
+        -- scale with distance between notes
+        if vars.effectDurationMode == 0 then
+            _, vars.effectDurationValue = imgui.SliderFloat("Duration Scale", vars.effectDurationValue, 0, 1, "%.2f")
+            helpMarkerText = "Scales the effect duration together with the distance between two offsets. If left on 1, then all stutters will seamlessly connect to each other."
+
+        -- snap
+        elseif vars.effectDurationMode == 1 then
+            _, vars.effectDurationValue = imgui.DragFloat("Duration Length", vars.effectDurationValue, 0.01, 0, 10e10, "%.2f")
+            helpMarkerText = "Input as a fraction of a beat, e.g. 0.25 would represent an interval of 1/4."
+
+        -- absolute
+        elseif vars.effectDurationMode == 2 then
+            _, vars.effectDurationValue = imgui.DragFloat("Duration Length", vars.effectDurationValue, 0.01, 0, 10e10, "%.2f")
+            helpMarkerText = "Fixed length, based on a millisecond value."
+        end
+        imgui.PopItemWidth()
+        gui.helpMarker(helpMarkerText)
+
+        gui.spacing()
+
+        local startSVBounds = {}
+
+        imgui.PushItemWidth(style.CONTENT_WIDTH)
+
+        if vars.allowNegativeValues then
+            startSVBounds = {-1000, 1000}
+            _, vars.startSV = imgui.DragFloat("Start velocity", vars.startSV, 0.01, startSVBounds[1], startSVBounds[2], "%.2fx")
+        else
+            startSVBounds = {0, vars.averageSV/vars.duration}
+            _, vars.startSV = imgui.SliderFloat("Start velocity", vars.startSV, startSVBounds[1], startSVBounds[2], "%.2fx")
+        end
+
+        gui.helpMarker(string.format("Current bounds: %.2fx - %.2fx", startSVBounds[1], startSVBounds[2]))
+
+        imgui.PopItemWidth()
+
+        imgui.PushItemWidth(style.CONTENT_WIDTH)
+        _, vars.duration = imgui.SliderFloat("Start SV Duration", vars.duration, 0.0, 1.0, "%.2f")
+        imgui.PopItemWidth()
+
+        -- Update limits after duration has changed
+        vars.startSV = math.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
+
+        gui.spacing()
+
+        gui.averageSV(vars)
+
+        if not (vars.effectDurationMode == 0 and vars.effectDurationValue == 1) then
+            _, vars.skipEndSV = imgui.Checkbox("Skip end SV of individual stutters?", vars.skipEndSV)
+            gui.helpMarker("If you use any other mode than \"Distance between notes\" and Scale = 1, then the stutter SVs won't directy connect to each other anymore. This adjust the behavior for the end SV of each individual stutter.")
+        end
+
+        _, vars.skipFinalEndSV = imgui.Checkbox("Skip the final end SV?", vars.skipFinalEndSV)
+
+        _, vars.allowNegativeValues = imgui.Checkbox("Allow negative Values?", vars.allowNegativeValues)
+        gui.helpMarker(
+            "Unexpected things can happen with negative SV, so I do not recommend " ..
+            "turning on this option unless you are an expert. This will remove the " ..
+            "limits for start SV. It can then be negative and also exceed the " ..
+            "value, where the projected equalize SV would be start to become negative."
+        )
+
+        gui.title("Calculate", true)
+
+        if gui.insertButton() then
+            local offsets = {}
+
+            for _, hitObject in pairs(state.SelectedHitObjects) do
+                table.insert(offsets, hitObject.StartTime)
+            end
+
+            if #offsets == 0 then
+                statusMessage = "No hitobjects selected!"
+            elseif #offsets == 1 then
+                statusMessage = "Needs hitobjects on different offsets selected!"
+            else
+                offsets = util.unique(offsets)
+
+                vars.lastSVs = sv.stutter(
+                    table.sort(offsets),
+                    vars.startSV,
+                    vars.duration,
+                    vars.averageSV,
+                    vars.skipEndSV,
+                    vars.skipFinalEndSV,
+                    vars.effectDurationMode,
+                    vars.effectDurationValue
+                )
+
+                editor.placeSVs(vars.lastSVs)
+            end
+        end
+
+        imgui.Text("Projected equalize SV: " .. string.format("%.2fx", (vars.duration*vars.startSV-vars.averageSV)/(vars.duration-1)))
+        gui.helpMarker("This represents the velocity of the intermediate SV that is used to balance out the initial SV")
+
         util.saveStateVariables(menuID, vars)
 
         imgui.EndTabItem()
@@ -140,13 +276,11 @@ function menu.cubicBezierSV()
         gui.title("Note")
         gui.hyperlink("https://cubic-bezier.com/")
 
-        gui.separator()
-        gui.title("Offset")
+        gui.title("Offset", true)
 
         gui.startEndOffset(vars)
 
-        gui.separator()
-        gui.title("Values")
+        gui.title("Values", true)
 
         local widths = util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
 
@@ -192,25 +326,23 @@ function menu.cubicBezierSV()
         vars.y2, vars.x1, vars.y1, vars.x2 = table.unpack(coords) -- the coords returned are in this order for some stupid reason??
         imgui.PopItemWidth()
 
-        gui.helpMarker("x: 0.0-1.0\ny: -1.0-2.0")
+        gui.helpMarker("x: 0.0 - 1.0\ny: -1.0 - 2.0")
 
         -- Set limits here instead of in the DragFloat4, since this also covers the parsed string
         vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, math.clamp, xBounds))
         vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, math.clamp, yBounds))
 
-        imgui.Dummy({0,10})
+        gui.spacing()
 
         gui.averageSV(vars, widths)
 
-        gui.separator()
-        gui.title("Utilities")
+        gui.title("Utilities", true)
 
         gui.intermediatePoints(vars)
 
-        gui.separator()
-        gui.title("Calculate")
+        gui.title("Calculate", true)
 
-        if imgui.Button("Insert into map ", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}) then
+        if gui.insertButton() then
             statusMessage = "pressed"
             vars.lastSVs, vars.lastPositionValues = sv.cubicBezier(
                 vars.x1,
@@ -228,8 +360,7 @@ function menu.cubicBezierSV()
         end
 
         if #vars.lastSVs > 0 then
-            gui.separator()
-            gui.title("Plots")
+            gui.title("Plots", true)
             gui.plot(vars.lastPositionValues, "Position Data", "y")
             gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end

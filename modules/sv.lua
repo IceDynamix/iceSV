@@ -17,6 +17,38 @@ function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     return SVs
 end
 
+function sv.stutter(offsets, startSV, duration, averageSV, skipEndSV, skipFinalEndSV, effectDurationMode, effectDurationValue)
+    local SVs = {}
+
+    for i, offset in ipairs(offsets) do
+        if i == #offsets then break end
+
+        table.insert(SVs, utils.CreateScrollVelocity(offset, startSV))
+
+        local length
+        if effectDurationMode == 0 then -- scale with distance between notes
+            length = (offsets[i+1] - offset) * effectDurationValue
+        elseif effectDurationMode == 1 then -- scale with snap
+            length = effectDurationValue * 60000/map.GetTimingPointAt(offset).Bpm
+        elseif effectDurationMode == 2 then -- absolute length
+            length = effectDurationValue
+        end
+
+        table.insert(SVs, utils.CreateScrollVelocity(length*duration + offset, (duration*startSV-averageSV)/(duration-1)))
+
+        local lastOffsetEnd = offset+length
+        if skipEndSV == false and (offsets[i+1] ~= lastOffsetEnd) then
+            table.insert(SVs, utils.CreateScrollVelocity(lastOffsetEnd, averageSV))
+        end
+    end
+
+    if skipFinalEndSV == false then
+        table.insert(SVs, utils.CreateScrollVelocity(offsets[#offsets], averageSV))
+    end
+
+    return SVs
+end
+
 --[[
     about beziers
 

@@ -4,7 +4,6 @@
 
 -- MAIN ------------------------------------------------------
 
-
 function draw()
     style.applyStyle()
     window.svMenu()
