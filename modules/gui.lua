@@ -33,14 +33,15 @@ function gui.helpMarker(text)
     gui.tooltip(text)
 end
 
-function gui.startEndOffset(variables)
+function gui.startEndOffset(vars)
 
     local widths = util.calcAbsoluteWidths({ 0.3, 0.7 })
+    local offsetStep = 1
 
     -- ROW 1
 
     if imgui.Button("Current", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-        variables["startOffset"] = state.SongTime
+        vars["startOffset"] = state.SongTime
         statusMessage = "Copied into start offset!"
     end
 
@@ -49,13 +50,13 @@ function gui.startEndOffset(variables)
     imgui.SameLine(0, style.SAMELINE_SPACING)
 
     imgui.PushItemWidth(widths[2])
-    _, variables["startOffset"] = imgui.InputInt("Start offset in ms", variables["startOffset"], 1000)
+    _, vars["startOffset"] = imgui.InputInt("Start offset in ms", vars["startOffset"], offsetStep)
     imgui.PopItemWidth()
 
     -- ROW 2
 
     if imgui.Button(" Current ", {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-        variables["endOffset"] = state.SongTime
+        vars["endOffset"] = state.SongTime
         statusMessage = "Copied into end offset!"
     end
 
@@ -64,7 +65,7 @@ function gui.startEndOffset(variables)
     imgui.SameLine(0, style.SAMELINE_SPACING)
 
     imgui.PushItemWidth(widths[2])
-    _, variables["endOffset"] = imgui.InputInt("End offset in ms", variables["endOffset"], 1000)
+    _, vars["endOffset"] = imgui.InputInt("End offset in ms", vars["endOffset"], offsetStep)
     imgui.PopItemWidth()
 end
 
