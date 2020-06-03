@@ -673,36 +673,55 @@ function menu.rangeEditor()
             },
             type = 0,
             windowSelectedOpen = false,
+            mode = 0,
         }
 
         util.retrieveStateVariables(menuID, vars)
 
-        gui.title("Type", true)
+        gui.title("Note", true)
+            imgui.TextWrapped("This is a very powerful tool and " ..
+                "can potentially erase hours of work, so please be careful and work on a " ..
+                "temporary difficulty if necessary! Please keep in mind that the selection " ..
+                "is cleared once you leave the editor (including testplaying).")
 
-        local selectableTypes = {
-            "SVs",
-            "Notes",
-            "BPM Points"
-        }
+        gui.title("Settings")
+            local modes = {
+                "Indirect",
+                "Direct"
+            }
 
-        imgui.PushItemWidth(style.CONTENT_WIDTH)
-        _, vars.type = imgui.Combo("Selection Type", vars.type, selectableTypes, #selectableTypes)
-        imgui.PopItemWidth()
+            imgui.PushItemWidth(style.CONTENT_WIDTH)
+            _, vars.mode = imgui.Combo("Edit Mode", vars.mode, modes, #modes)
+            imgui.PopItemWidth()
+
+            gui.helpMarker(
+                "The range editor is based on two modes. Direct mode edits the " ..
+                "map directly, while indirect mode represents a temporary testing " ..
+                "area (called 'selection') where you can freely add/remove/edit " ..
+                "elements however you like without affecting the map itself. " ..
+                "You're free to insert your selection into the map after you're " ..
+                "done editing your selections."
+            )
+
+            local selectableTypes = {
+                "SVs",
+                "Notes",
+                "BPM Points"
+            }
+
+            imgui.PushItemWidth(style.CONTENT_WIDTH)
+            _, vars.type = imgui.Combo("Selection Type", vars.type, selectableTypes, #selectableTypes)
+            imgui.PopItemWidth()
 
         gui.title("Range")
-        gui.startEndOffset(vars)
+            gui.startEndOffset(vars)
 
         gui.title("Selection")
 
         local buttonWidths = util.calcAbsoluteWidths({0.5, 0.5})
-
         local addRangeButtonWidth
-
-        if #vars.selections[vars.type] > 0 then
-            addRangeButtonWidth = buttonWidths[1]
-        else
-            addRangeButtonWidth = style.CONTENT_WIDTH
-        end
+        if #vars.selections[vars.type] > 0 then addRangeButtonWidth = buttonWidths[1]
+        else addRangeButtonWidth = style.CONTENT_WIDTH end
 
         if imgui.Button("Add range", {addRangeButtonWidth, style.DEFAULT_WIDGET_HEIGHT}) then
             local elements = {
@@ -737,17 +756,22 @@ function menu.rangeEditor()
 
             vars.selections[vars.type] = newElements
 
-            statusMessage = string.format(
-                "Added %s %s",
-                #vars.selections[vars.type] - previousCount,
-                selectableTypes[vars.type + 1]
-            )
+            if #vars.selections[vars.type] - previousCount == 0 then
+                statusMessage = string.format("No %s in range!", selectableTypes[vars.type + 1])
+            else
+                statusMessage = string.format(
+                    "Added %s %s",
+                    #vars.selections[vars.type] - previousCount,
+                    selectableTypes[vars.type + 1]
+                )
+            end
         end
 
         if #vars.selections[vars.type] > 0 then
             imgui.SameLine(0, style.SAMELINE_SPACING)
 
             if imgui.Button("Remove range", {buttonWidths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+                local previousCount = #vars.selections[vars.type]
                 vars.selections[vars.type] = util.filter(
                     vars.selections[vars.type],
                     function(i, element)
@@ -757,6 +781,17 @@ function menu.rangeEditor()
                         )
                     end
                 )
+
+                if #vars.selections[vars.type] - previousCount == 0 then
+                    statusMessage = string.format("No %s in range!", selectableTypes[vars.type + 1])
+                else
+                    statusMessage = string.format(
+                        "Removed %s %s",
+                        previousCount - #vars.selections[vars.type],
+                        selectableTypes[vars.type + 1]
+                    )
+                end
+
             end
 
             imgui.SameLine(0, style.SAMELINE_SPACING)
@@ -764,6 +799,7 @@ function menu.rangeEditor()
 
             if imgui.Button("Clear selection", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
                 vars.selections[vars.type] = {}
+                statusMessage = "Cleared selection"
             end
 
             imgui.SameLine(0, style.SAMELINE_SPACING)
@@ -774,6 +810,25 @@ function menu.rangeEditor()
 
             if vars.windowSelectedOpen then
                 window.selectedRange(vars)
+            end
+
+            -- TODO Cut selection from map
+            -- TODO Edit values (add, multiply, set)
+            -- TODO Crossedit (add, multiply)
+            -- TODO Subdivide by n or to time
+            -- TODO Delete nth with offset
+            -- TODO Plot (not for hitobjects)
+            -- TODO Export as CSV/YAML
+
+            gui.title("Editor Actions")
+
+            if imgui.Button("Paste at current timestamp", style.FULLSIZE_WIDGET_SIZE) then
+                statusMessage = "Not implemented yet!"
+            end
+
+            -- TODO hitobject selection maker
+            if imgui.Button("Paste at all selected notes", style.FULLSIZE_WIDGET_SIZE) then
+                statusMessage = "Not implemented yet!"
             end
         end
 
@@ -1018,11 +1073,12 @@ function util.toString(var, imguiText)
     return string
 end
 
-function util.calcAbsoluteWidths(relativeWidths)
+function util.calcAbsoluteWidths(relativeWidths, width)
     local absoluteWidths = {}
     local n = #relativeWidths
+    local totalWidth = width or style.CONTENT_WIDTH
     for _, value in pairs(relativeWidths) do
-        table.insert(absoluteWidths, (value * style.CONTENT_WIDTH) - (style.SAMELINE_SPACING/n))
+        table.insert(absoluteWidths, (value * totalWidth) - (style.SAMELINE_SPACING/n))
     end
     return absoluteWidths
 end
@@ -1139,12 +1195,28 @@ function window.svMenu()
 end
 
 function window.selectedRange(vars)
-    imgui.SetNextWindowSize({100 * #editor.typeAttributes[vars.type], 500})
+
+    local windowWidth = 100 * #editor.typeAttributes[vars.type]
+    imgui.SetNextWindowSize({windowWidth, 500})
 
     imgui.Begin("Selected elements", true, imgui_window_flags.AlwaysAutoResize)
-        if imgui.Button("Close Window") then
+
+        local buttonWidths = util.calcAbsoluteWidths({1/4, 1/4, 1/4}, windowWidth)
+
+        if imgui.Button("Close Window", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
             vars.windowSelectedOpen = false
         end
+        imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        if imgui.Button("Export as CSV", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            statusMessage = "Not implemented yet!"
+        end
+        imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        if imgui.Button("Export as YAML", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            statusMessage = "Not implemented yet!"
+        end
+
         imgui.Columns(#editor.typeAttributes[vars.type])
 
         for _, value in pairs(editor.typeAttributes[vars.type]) do

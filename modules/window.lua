@@ -25,12 +25,28 @@ function window.svMenu()
 end
 
 function window.selectedRange(vars)
-    imgui.SetNextWindowSize({100 * #editor.typeAttributes[vars.type], 500})
+
+    local windowWidth = 100 * #editor.typeAttributes[vars.type]
+    imgui.SetNextWindowSize({windowWidth, 500})
 
     imgui.Begin("Selected elements", true, imgui_window_flags.AlwaysAutoResize)
-        if imgui.Button("Close Window") then
+
+        local buttonWidths = util.calcAbsoluteWidths({1/4, 1/4, 1/4}, windowWidth)
+
+        if imgui.Button("Close Window", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
             vars.windowSelectedOpen = false
         end
+        imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        if imgui.Button("Export as CSV", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            statusMessage = "Not implemented yet!"
+        end
+        imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        if imgui.Button("Export as YAML", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+            statusMessage = "Not implemented yet!"
+        end
+
         imgui.Columns(#editor.typeAttributes[vars.type])
 
         for _, value in pairs(editor.typeAttributes[vars.type]) do

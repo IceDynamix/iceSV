@@ -37,11 +37,12 @@ function util.toString(var, imguiText)
     return string
 end
 
-function util.calcAbsoluteWidths(relativeWidths)
+function util.calcAbsoluteWidths(relativeWidths, width)
     local absoluteWidths = {}
     local n = #relativeWidths
+    local totalWidth = width or style.CONTENT_WIDTH
     for _, value in pairs(relativeWidths) do
-        table.insert(absoluteWidths, (value * style.CONTENT_WIDTH) - (style.SAMELINE_SPACING/n))
+        table.insert(absoluteWidths, (value * totalWidth) - (style.SAMELINE_SPACING/n))
     end
     return absoluteWidths
 end
