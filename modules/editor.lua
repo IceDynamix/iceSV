@@ -36,6 +36,22 @@ editor.typeAttributes = {
     }
 }
 
+--- Manipulates a table of elements with specified functions and returns a new table
+-- Iterates over each possible attribute for a given type, it will apply a function
+-- if one has been defined for that type in the settings table.
+-- @param elements Table of elements to manipulate
+-- @param typeMode Number between 0 and 2, representing the type SV, note or BPM
+-- @param settings Table, where each key is a attribute of a type and the value is a function to apply to that attribute
+
+--[[
+    Example:
+        settings = {
+            StartTime = function(t) return t + 100 end
+        }
+
+        would shift all StartTimes by 100
+]]
+
 function editor.createNewTableOfElements(elements, typeMode, settings)
     local newTable = {}
 

@@ -33,19 +33,20 @@ function window.selectedRange(vars)
 
         local buttonWidths = util.calcAbsoluteWidths({1/4, 1/4, 1/4}, windowWidth)
 
-        if imgui.Button("Close Window", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        if imgui.Button("Close Window" --[[ , {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT} ]] ) then
             vars.windowSelectedOpen = false
         end
-        imgui.SameLine(0, style.SAMELINE_SPACING)
 
-        if imgui.Button("Export as CSV", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            statusMessage = "Not implemented yet!"
-        end
-        imgui.SameLine(0, style.SAMELINE_SPACING)
+        -- imgui.SameLine(0, style.SAMELINE_SPACING)
 
-        if imgui.Button("Export as YAML", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
-            statusMessage = "Not implemented yet!"
-        end
+        -- if imgui.Button("Export as CSV", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        --     statusMessage = "Not implemented yet!"
+        -- end
+        -- imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        -- if imgui.Button("Export as YAML", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        --     statusMessage = "Not implemented yet!"
+        -- end
 
         imgui.Columns(#editor.typeAttributes[vars.type])
 

@@ -11,16 +11,16 @@
 - Linear SV
 - Stutter SV
 - Cubic Bezier
-- SV Range Editor (planned)
+- SV Range Editor (in progress)
 
 ## Instructions on installing the plugin
 
 The workshop has yet to be implemented, so please follow these steps
 
 1. Download the repository as a .zip and unpack in `Quaver/Plugins`
-    - Alternatively, clone the project with Git if you know what you're doing
-    - You can then run `git pull` to update to the newest version
-2. Open the Quaver editor and activate the plugin under `Plugins > iceSV`
+    - Alternatively, clone the project with Git if you know what you're doing,
+      you can then run `git pull` to update to the newest version
+2. Open the Quaver editor and select the plugin under `Plugins > iceSV`
 
 ## Documentation
 
