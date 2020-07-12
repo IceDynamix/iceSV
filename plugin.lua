@@ -909,9 +909,28 @@ function menu.rangeEditor()
                 editor.placeElements(newTable, vars.type)
             end
 
-            -- TODO: hitobject selection maker
             if imgui.Button("Paste at all selected notes", style.FULLSIZE_WIDGET_SIZE) then
-                statusMessage = "Not implemented yet!"
+
+                for _, hitObject in pairs(state.SelectedHitObjects) do
+
+                    local delta = hitObject.StartTime - vars.selections[vars.type][1].StartTime
+
+                    local newTable = editor.createNewTableOfElements(
+                        vars.selections[vars.type],
+                        vars.type,
+                        {
+                            StartTime = function (startTime) return startTime + delta end,
+                            EndTime = function (endTime) -- used for notes, ignored for svs/bpms
+                                if endTime == 0 then return 0
+                                else return endTime + delta end
+                            end
+                        }
+                    )
+
+                    editor.placeElements(newTable, vars.type)
+                end
+
+
             end
         end
 
@@ -1252,7 +1271,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.6.5"
+    statusMessage = state.GetValue("statusMessage") or "b2020.7.13"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
