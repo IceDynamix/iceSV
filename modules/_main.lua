@@ -5,7 +5,6 @@
 -- MAIN ------------------------------------------------------
 
 function draw()
-    imgui.ShowDemoWindow()
     style.applyStyle()
     window.svMenu()
 end
