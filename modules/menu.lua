@@ -93,7 +93,7 @@ function menu.linearSV()
                 vars.intermediatePoints,
                 vars.skipEndSV
             )
-            editor.placeSVs(vars.lastSVs)
+            editor.placeElements(vars.lastSVs)
         end
 
         if #vars.lastSVs > 0 then
@@ -186,7 +186,7 @@ function menu.stutterSV()
         imgui.PopItemWidth()
 
         -- Update limits after duration has changed
-        vars.startSV = math.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
+        vars.startSV = mathematics.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
 
         gui.spacing()
 
@@ -234,7 +234,7 @@ function menu.stutterSV()
                     vars.effectDurationValue
                 )
 
-                editor.placeSVs(vars.lastSVs)
+                editor.placeElements(vars.lastSVs)
             end
         end
 
@@ -329,8 +329,8 @@ function menu.cubicBezierSV()
         gui.helpMarker("x: 0.0 - 1.0\ny: -1.0 - 2.0")
 
         -- Set limits here instead of in the DragFloat4, since this also covers the parsed string
-        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, math.clamp, xBounds))
-        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, math.clamp, yBounds))
+        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, mathematics.clamp, xBounds))
+        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, mathematics.clamp, yBounds))
 
         gui.spacing()
 
@@ -356,7 +356,7 @@ function menu.cubicBezierSV()
                 vars.skipEndSV
             )
 
-            editor.placeSVs(vars.lastSVs)
+            editor.placeElements(vars.lastSVs)
         end
 
         if #vars.lastSVs > 0 then
@@ -400,6 +400,8 @@ function menu.rangeEditor()
                 "Indirect",
                 "Direct"
             }
+
+            -- TODO: Edit mode functionality
 
             imgui.PushItemWidth(style.CONTENT_WIDTH)
             _, vars.mode = imgui.Combo("Edit Mode", vars.mode, modes, #modes)
@@ -523,21 +525,35 @@ function menu.rangeEditor()
                 window.selectedRange(vars)
             end
 
-            -- TODO Cut selection from map
-            -- TODO Edit values (add, multiply, set)
-            -- TODO Crossedit (add, multiply)
-            -- TODO Subdivide by n or to time
-            -- TODO Delete nth with offset
-            -- TODO Plot (not for hitobjects)
-            -- TODO Export as CSV/YAML
+            -- TODO: Cut selection from map
+            -- TODO: Edit values (add, multiply, set)
+            -- TODO: Crossedit (add, multiply)
+            -- TODO: Subdivide by n or to time
+            -- TODO: Delete nth with offset
+            -- TODO: Plot (not for hitobjects)
+            -- TODO: Export as CSV/YAML
 
             gui.title("Editor Actions")
 
             if imgui.Button("Paste at current timestamp", style.FULLSIZE_WIDGET_SIZE) then
-                statusMessage = "Not implemented yet!"
+                local delta = state.SongTime - vars.selections[vars.type][1].StartTime
+
+                local newTable = editor.createNewTableOfElements(
+                    vars.selections[vars.type],
+                    vars.type,
+                    {
+                        StartTime = function (startTime) return startTime + delta end,
+                        EndTime = function (endTime) -- used for notes, ignored for svs/bpms
+                            if endTime == 0 then return 0
+                            else return endTime + delta end
+                        end
+                    }
+                )
+
+                editor.placeElements(newTable, vars.type)
             end
 
-            -- TODO hitobject selection maker
+            -- TODO: hitobject selection maker
             if imgui.Button("Paste at all selected notes", style.FULLSIZE_WIDGET_SIZE) then
                 statusMessage = "Not implemented yet!"
             end

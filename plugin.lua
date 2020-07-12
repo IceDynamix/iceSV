@@ -19,7 +19,7 @@
 -- MODULES:
 editor = {}
 gui = {}
-math = {}
+mathematics = {}
 menu = {}
 style = {}
 sv = {}
@@ -29,10 +29,20 @@ window = {}
 -- modules\editor.lua
 -------------------------------------------------------------------------------------
 
-function editor.placeSVs(SVs)
-    if #SVs == 0 then return end
-        actions.PlaceScrollVelocityBatch(SVs)
-    statusMessage = "Inserted " .. #SVs .. " SV points!"
+function editor.placeElements(elements, type)
+    if #elements == 0 then return end
+    local status = "Inserted " .. #elements .. " "
+    if not type or type == 0 then
+        actions.PlaceScrollVelocityBatch(elements)
+        status = status .. "SVs"
+    elseif type == 1 then
+        actions.PlaceHitObjectBatch(elements)
+        status = status .. "notes"
+    elseif type == 2 then
+        actions.PlaceTimingPointBatch(elements)
+        status = status .. "BPM Points"
+    end
+    statusMessage = status .. "!"
 end
 
 editor.typeAttributes = {
@@ -56,6 +66,37 @@ editor.typeAttributes = {
         -- "Signature", same reason
     }
 }
+
+function editor.createNewTableOfElements(elements, typeMode, settings)
+    local newTable = {}
+
+    for _, element in pairs(elements) do
+        local newElement = {}
+        for _, attribute in pairs(editor.typeAttributes[typeMode]) do
+            if settings[attribute] then
+                newElement[attribute] = settings[attribute](element[attribute])
+            else
+                newElement[attribute] = element[attribute]
+            end
+        end
+
+        table.insert(newTable, newElement)
+    end
+
+    local newElements = {}
+
+    for _, el in pairs(newTable) do
+        if typeMode == 0 then
+            table.insert(newElements, utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
+        elseif typeMode == 1 then
+            table.insert(newElements, utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
+        elseif typeMode == 2 then
+            table.insert(newElements, utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
+        end
+    end
+
+    return newElements
+end
 
 -------------------------------------------------------------------------------------
 -- modules\gui.lua
@@ -164,7 +205,7 @@ function gui.printVars(vars, title)
 end
 
 function gui.plot(values, title, valueAttribute)
-    if values == nil or #values == 0 then return end
+    if not values or #values == 0 then return end
 
     local trueValues
 
@@ -177,9 +218,17 @@ function gui.plot(values, title, valueAttribute)
         trueValues = values
     end
 
-    imgui.PushItemWidth(style.CONTENT_WIDTH)
-    imgui.PlotLines(title, trueValues, #trueValues)
-    imgui.PopItemWidth()
+    imgui.PlotLines(
+        title,
+        trueValues, #trueValues,
+        0,
+        nil,
+        nil, nil,
+        imgui.CreateVector2( -- does not seem to work with a normal table
+            style.CONTENT_WIDTH,
+            200
+        )
+    )
 end
 
 function gui.hyperlink(url, text)
@@ -241,7 +290,7 @@ function gui.intermediatePoints(vars)
     _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
     imgui.PopItemWidth()
 
-    vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
+    vars.intermediatePoints = mathematics.clamp(vars.intermediatePoints, 1, 500)
     _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
 end
 
@@ -250,37 +299,55 @@ function gui.insertButton()
 end
 
 -------------------------------------------------------------------------------------
--- modules\math.lua
+-- modules\mathematics.lua
 -------------------------------------------------------------------------------------
 
 -- Simple recursive implementation of the binomial coefficient
-function math.binom(n, k)
+function mathematics.binom(n, k)
     if k == 0 or k == n then return 1 end
-    return math.binom(n-1, k-1) + math.binom(n-1, k)
+    return mathematics.binom(n-1, k-1) + mathematics.binom(n-1, k)
 end
 
 -- Currently unused
-function math.bernsteinPolynomial(i,n,t) return math.binom(n,i) * t^i * (1-t)^(n-i) end
+function mathematics.bernsteinPolynomial(i,n,t) return mathematics.binom(n,i) * t^i * (1-t)^(n-i) end
 
 -- Derivative for *any* bezier curve with at point t
 -- Currently unused
-function math.bezierDerivative(P, t)
+function mathematics.bezierDerivative(P, t)
     local n = #P
     local sum = 0
-    for i = 0, n-2, 1 do sum = sum + math.bernsteinPolynomial(i,n-2,t) * (P[i+2].y - P[i+1].y) end
+    for i = 0, n-2, 1 do sum = sum + mathematics.bernsteinPolynomial(i,n-2,t) * (P[i+2].y - P[i+1].y) end
     return sum
 end
 
-function math.cubicBezier(P, t)
+function mathematics.cubicBezier(P, t)
     return P[1] + 3*t*(P[2]-P[1]) + 3*t^2*(P[1]+P[3]-2*P[2]) + t^3*(P[4]-P[1]+3*P[2]-3*P[3])
 end
 
-function math.round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
+function mathematics.round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
 
-function math.clamp(x, min, max)
+function mathematics.clamp(x, min, max)
     if x < min then x = min end
     if x > max then x = max end
     return x
+end
+
+function mathematics.min(t)
+    local min = t[1]
+    for _, value in pairs(t) do
+        if value < min then min = value end
+    end
+
+    return min
+end
+
+function mathematics.max(t)
+    local max = t[1]
+    for _, value in pairs(t) do
+        if value > max then max = value end
+    end
+
+    return max
 end
 
 -------------------------------------------------------------------------------------
@@ -382,7 +449,7 @@ function menu.linearSV()
                 vars.intermediatePoints,
                 vars.skipEndSV
             )
-            editor.placeSVs(vars.lastSVs)
+            editor.placeElements(vars.lastSVs)
         end
 
         if #vars.lastSVs > 0 then
@@ -475,7 +542,7 @@ function menu.stutterSV()
         imgui.PopItemWidth()
 
         -- Update limits after duration has changed
-        vars.startSV = math.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
+        vars.startSV = mathematics.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
 
         gui.spacing()
 
@@ -523,7 +590,7 @@ function menu.stutterSV()
                     vars.effectDurationValue
                 )
 
-                editor.placeSVs(vars.lastSVs)
+                editor.placeElements(vars.lastSVs)
             end
         end
 
@@ -618,8 +685,8 @@ function menu.cubicBezierSV()
         gui.helpMarker("x: 0.0 - 1.0\ny: -1.0 - 2.0")
 
         -- Set limits here instead of in the DragFloat4, since this also covers the parsed string
-        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, math.clamp, xBounds))
-        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, math.clamp, yBounds))
+        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, mathematics.clamp, xBounds))
+        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, mathematics.clamp, yBounds))
 
         gui.spacing()
 
@@ -645,7 +712,7 @@ function menu.cubicBezierSV()
                 vars.skipEndSV
             )
 
-            editor.placeSVs(vars.lastSVs)
+            editor.placeElements(vars.lastSVs)
         end
 
         if #vars.lastSVs > 0 then
@@ -689,6 +756,8 @@ function menu.rangeEditor()
                 "Indirect",
                 "Direct"
             }
+
+            -- TODO: Edit mode functionality
 
             imgui.PushItemWidth(style.CONTENT_WIDTH)
             _, vars.mode = imgui.Combo("Edit Mode", vars.mode, modes, #modes)
@@ -812,21 +881,35 @@ function menu.rangeEditor()
                 window.selectedRange(vars)
             end
 
-            -- TODO Cut selection from map
-            -- TODO Edit values (add, multiply, set)
-            -- TODO Crossedit (add, multiply)
-            -- TODO Subdivide by n or to time
-            -- TODO Delete nth with offset
-            -- TODO Plot (not for hitobjects)
-            -- TODO Export as CSV/YAML
+            -- TODO: Cut selection from map
+            -- TODO: Edit values (add, multiply, set)
+            -- TODO: Crossedit (add, multiply)
+            -- TODO: Subdivide by n or to time
+            -- TODO: Delete nth with offset
+            -- TODO: Plot (not for hitobjects)
+            -- TODO: Export as CSV/YAML
 
             gui.title("Editor Actions")
 
             if imgui.Button("Paste at current timestamp", style.FULLSIZE_WIDGET_SIZE) then
-                statusMessage = "Not implemented yet!"
+                local delta = state.SongTime - vars.selections[vars.type][1].StartTime
+
+                local newTable = editor.createNewTableOfElements(
+                    vars.selections[vars.type],
+                    vars.type,
+                    {
+                        StartTime = function (startTime) return startTime + delta end,
+                        EndTime = function (endTime) -- used for notes, ignored for svs/bpms
+                            if endTime == 0 then return 0
+                            else return endTime + delta end
+                        end
+                    }
+                )
+
+                editor.placeElements(newTable, vars.type)
             end
 
-            -- TODO hitobject selection maker
+            -- TODO: hitobject selection maker
             if imgui.Button("Paste at all selected notes", style.FULLSIZE_WIDGET_SIZE) then
                 statusMessage = "Not implemented yet!"
             end
@@ -1000,8 +1083,8 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     local totalSampleSize = 2500
     local allBezierSamples = {}
     for t=0, 1, 1/totalSampleSize do
-        local x = math.cubicBezier({0, P1_x, P2_x, 1}, t)
-        local y = math.cubicBezier({0, P1_y, P2_y, 1}, t)
+        local x = mathematics.cubicBezier({0, P1_x, P2_x, 1}, t)
+        local y = mathematics.cubicBezier({0, P1_y, P2_y, 1}, t)
         table.insert(allBezierSamples, {x=x,y=y})
     end
 
@@ -1019,7 +1102,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
 
     for i = 1, intermediatePoints, 1 do
         local offset = (i-1) * timeInterval + startOffset
-        local velocity = math.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
+        local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
         table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
     end
 
@@ -1169,7 +1252,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.6.3"
+    statusMessage = state.GetValue("statusMessage") or "b2020.6.5"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 

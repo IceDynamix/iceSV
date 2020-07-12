@@ -78,8 +78,8 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     local totalSampleSize = 2500
     local allBezierSamples = {}
     for t=0, 1, 1/totalSampleSize do
-        local x = math.cubicBezier({0, P1_x, P2_x, 1}, t)
-        local y = math.cubicBezier({0, P1_y, P2_y, 1}, t)
+        local x = mathematics.cubicBezier({0, P1_x, P2_x, 1}, t)
+        local y = mathematics.cubicBezier({0, P1_y, P2_y, 1}, t)
         table.insert(allBezierSamples, {x=x,y=y})
     end
 
@@ -97,7 +97,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
 
     for i = 1, intermediatePoints, 1 do
         local offset = (i-1) * timeInterval + startOffset
-        local velocity = math.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
+        local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
         table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
     end
 

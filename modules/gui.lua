@@ -101,7 +101,7 @@ function gui.printVars(vars, title)
 end
 
 function gui.plot(values, title, valueAttribute)
-    if values == nil or #values == 0 then return end
+    if not values or #values == 0 then return end
 
     local trueValues
 
@@ -114,9 +114,17 @@ function gui.plot(values, title, valueAttribute)
         trueValues = values
     end
 
-    imgui.PushItemWidth(style.CONTENT_WIDTH)
-    imgui.PlotLines(title, trueValues, #trueValues)
-    imgui.PopItemWidth()
+    imgui.PlotLines(
+        title,
+        trueValues, #trueValues,
+        0,
+        nil,
+        nil, nil,
+        imgui.CreateVector2( -- does not seem to work with a normal table
+            style.CONTENT_WIDTH,
+            200
+        )
+    )
 end
 
 function gui.hyperlink(url, text)
@@ -178,7 +186,7 @@ function gui.intermediatePoints(vars)
     _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
     imgui.PopItemWidth()
 
-    vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
+    vars.intermediatePoints = mathematics.clamp(vars.intermediatePoints, 1, 500)
     _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
 end
 
