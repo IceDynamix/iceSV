@@ -37,11 +37,12 @@ function util.toString(var, imguiText)
     return string
 end
 
-function util.calcAbsoluteWidths(relativeWidths)
+function util.calcAbsoluteWidths(relativeWidths, width)
     local absoluteWidths = {}
     local n = #relativeWidths
+    local totalWidth = width or style.CONTENT_WIDTH
     for _, value in pairs(relativeWidths) do
-        table.insert(absoluteWidths, (value * style.CONTENT_WIDTH) - (style.SAMELINE_SPACING/n))
+        table.insert(absoluteWidths, (value * totalWidth) - (style.SAMELINE_SPACING/n))
     end
     return absoluteWidths
 end
@@ -74,16 +75,55 @@ function util.mapFunctionToTable(oldTable, func, params)
     return newTable
 end
 
-function util.unique(table)
+function util.uniqueBy(t, attribute)
     local hash = {}
     local res = {}
 
-    for _,v in ipairs(table) do
-        if (not hash[v]) then
+    for _,v in ipairs(t) do
+
+        local key
+        if attribute then
+            key = v[attribute]
+        else
+            key = v
+        end
+
+        if (not hash[key]) then
             res[#res+1] = v
-            hash[v] = true
+            hash[key] = true
         end
     end
 
     return res
+end
+
+function util.filter(t, condition)
+    local filtered = {}
+    for key, value in pairs(t) do
+        if condition(key, value) then table.insert(filtered, value) end
+    end
+    return filtered
+end
+
+function util.mergeUnique(t1, t2, keysToCompare)
+    local hash = {}
+    local newTable = {}
+
+    for _, t in pairs({t1, t2}) do
+        for _, element in pairs(t) do
+            -- You can't directly set the table as the hash value, since tables
+            -- are compared by reference and everything with tables is pass by reference
+            local hashValue = ""
+            for _, key in pairs(keysToCompare) do
+                hashValue = hashValue .. element[key] .. "|"
+            end
+
+            if not hash[hashValue] then
+                table.insert(newTable, element)
+                hash[hashValue] = true
+            end
+        end
+    end
+
+    return newTable
 end

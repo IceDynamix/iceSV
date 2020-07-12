@@ -19,7 +19,7 @@
 -- MODULES:
 editor = {}
 gui = {}
-math = {}
+mathematics = {}
 menu = {}
 style = {}
 sv = {}
@@ -29,18 +29,97 @@ window = {}
 -- modules\editor.lua
 -------------------------------------------------------------------------------------
 
-function editor.placeSVs(SVs)
-    if #SVs == 0 then return end
-        actions.PlaceScrollVelocityBatch(SVs)
-    statusMessage = "Inserted " .. #SVs .. " SV points!"
+function editor.placeElements(elements, type)
+    if #elements == 0 then return end
+    local status = "Inserted " .. #elements .. " "
+    if not type or type == 0 then
+        actions.PlaceScrollVelocityBatch(elements)
+        status = status .. "SVs"
+    elseif type == 1 then
+        actions.PlaceHitObjectBatch(elements)
+        status = status .. "notes"
+    elseif type == 2 then
+        actions.PlaceTimingPointBatch(elements)
+        status = status .. "BPM Points"
+    end
+    statusMessage = status .. "!"
+end
+
+editor.typeAttributes = {
+    -- SV
+    [0] = {
+        "StartTime",
+        "Multiplier"
+    },
+    -- "Note"
+    [1] = {
+        "StartTime",
+        "Lane",
+        "EndTime",
+        -- "HitSound", left out because there's some trouble with comparing hitsound values
+        "EditorLayer"
+    },
+    -- BPM
+    [2] = {
+        "StartTime",
+        "Bpm",
+        -- "Signature", same reason
+    }
+}
+
+--- Manipulates a table of elements with specified functions and returns a new table
+-- Iterates over each possible attribute for a given type, it will apply a function
+-- if one has been defined for that type in the settings table.
+-- @param elements Table of elements to manipulate
+-- @param typeMode Number between 0 and 2, representing the type SV, note or BPM
+-- @param settings Table, where each key is a attribute of a type and the value is a function to apply to that attribute
+
+--[[
+    Example:
+        settings = {
+            StartTime = function(t) return t + 100 end
+        }
+
+        would shift all StartTimes by 100
+]]
+
+function editor.createNewTableOfElements(elements, typeMode, settings)
+    local newTable = {}
+
+    for _, element in pairs(elements) do
+        local newElement = {}
+        for _, attribute in pairs(editor.typeAttributes[typeMode]) do
+            if settings[attribute] then
+                newElement[attribute] = settings[attribute](element[attribute])
+            else
+                newElement[attribute] = element[attribute]
+            end
+        end
+
+        table.insert(newTable, newElement)
+    end
+
+    local newElements = {}
+
+    for _, el in pairs(newTable) do
+        if typeMode == 0 then
+            table.insert(newElements, utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
+        elseif typeMode == 1 then
+            table.insert(newElements, utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
+        elseif typeMode == 2 then
+            table.insert(newElements, utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
+        end
+    end
+
+    return newElements
 end
 
 -------------------------------------------------------------------------------------
 -- modules\gui.lua
 -------------------------------------------------------------------------------------
 
-function gui.title(title, sep)
-    if sep then
+function gui.title(title, skipSeparator)
+    if not skipSeparator then
         gui.spacing()
         imgui.Separator()
     end
@@ -142,7 +221,7 @@ function gui.printVars(vars, title)
 end
 
 function gui.plot(values, title, valueAttribute)
-    if values == nil or #values == 0 then return end
+    if not values or #values == 0 then return end
 
     local trueValues
 
@@ -155,9 +234,17 @@ function gui.plot(values, title, valueAttribute)
         trueValues = values
     end
 
-    imgui.PushItemWidth(style.CONTENT_WIDTH)
-    imgui.PlotLines(title, trueValues, #trueValues)
-    imgui.PopItemWidth()
+    imgui.PlotLines(
+        title,
+        trueValues, #trueValues,
+        0,
+        nil,
+        nil, nil,
+        imgui.CreateVector2( -- does not seem to work with a normal table
+            style.CONTENT_WIDTH,
+            200
+        )
+    )
 end
 
 function gui.hyperlink(url, text)
@@ -219,46 +306,64 @@ function gui.intermediatePoints(vars)
     _, vars.intermediatePoints = imgui.InputInt("Intermediate points", vars.intermediatePoints, 4)
     imgui.PopItemWidth()
 
-    vars.intermediatePoints = math.clamp(vars.intermediatePoints, 1, 500)
+    vars.intermediatePoints = mathematics.clamp(vars.intermediatePoints, 1, 500)
     _, vars.skipEndSV = imgui.Checkbox("Skip end SV?", vars.skipEndSV)
 end
 
 function gui.insertButton()
-    return imgui.Button("Insert into map", {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT})
+    return imgui.Button("Insert into map", style.FULLSIZE_WIDGET_SIZE)
 end
 
 -------------------------------------------------------------------------------------
--- modules\math.lua
+-- modules\mathematics.lua
 -------------------------------------------------------------------------------------
 
 -- Simple recursive implementation of the binomial coefficient
-function math.binom(n, k)
+function mathematics.binom(n, k)
     if k == 0 or k == n then return 1 end
-    return math.binom(n-1, k-1) + math.binom(n-1, k)
+    return mathematics.binom(n-1, k-1) + mathematics.binom(n-1, k)
 end
 
 -- Currently unused
-function math.bernsteinPolynomial(i,n,t) return math.binom(n,i) * t^i * (1-t)^(n-i) end
+function mathematics.bernsteinPolynomial(i,n,t) return mathematics.binom(n,i) * t^i * (1-t)^(n-i) end
 
 -- Derivative for *any* bezier curve with at point t
 -- Currently unused
-function math.bezierDerivative(P, t)
+function mathematics.bezierDerivative(P, t)
     local n = #P
     local sum = 0
-    for i = 0, n-2, 1 do sum = sum + math.bernsteinPolynomial(i,n-2,t) * (P[i+2].y - P[i+1].y) end
+    for i = 0, n-2, 1 do sum = sum + mathematics.bernsteinPolynomial(i,n-2,t) * (P[i+2].y - P[i+1].y) end
     return sum
 end
 
-function math.cubicBezier(P, t)
+function mathematics.cubicBezier(P, t)
     return P[1] + 3*t*(P[2]-P[1]) + 3*t^2*(P[1]+P[3]-2*P[2]) + t^3*(P[4]-P[1]+3*P[2]-3*P[3])
 end
 
-function math.round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
+function mathematics.round(x, n) return tonumber(string.format("%." .. (n or 0) .. "f", x)) end
 
-function math.clamp(x, min, max)
+function mathematics.clamp(x, min, max)
     if x < min then x = min end
     if x > max then x = max end
     return x
+end
+
+function mathematics.min(t)
+    local min = t[1]
+    for _, value in pairs(t) do
+        if value < min then min = value end
+    end
+
+    return min
+end
+
+function mathematics.max(t)
+    local max = t[1]
+    for _, value in pairs(t) do
+        if value > max then max = value end
+    end
+
+    return max
 end
 
 -------------------------------------------------------------------------------------
@@ -267,7 +372,7 @@ end
 
 function menu.information()
     if imgui.BeginTabItem("Information") then
-        gui.title("Help")
+        gui.title("Help", true)
 
         imgui.TextWrapped("Hover over each function for an explanation")
 
@@ -280,7 +385,7 @@ function menu.information()
         imgui.BulletText("Cubic Bezier")
         gui.tooltip("Creates velocity points for a path defined by a cubic bezier curve")
 
-        gui.title("About", true)
+        gui.title("About")
 
         imgui.Columns(2)
 
@@ -303,7 +408,7 @@ function menu.linearSV()
 
     local menuID = "linear"
 
-    if imgui.BeginTabItem("Linear SV") then
+    if imgui.BeginTabItem("Linear") then
 
         -- Initialize variables
         local vars = {
@@ -320,10 +425,10 @@ function menu.linearSV()
 
         -- Create UI Elements
 
-        gui.title("Offset")
+        gui.title("Offset", true)
         gui.startEndOffset(vars)
 
-        gui.title("Velocities", true)
+        gui.title("Velocities")
 
         local velocities = { vars.startSV, vars.endSV }
         imgui.PushItemWidth(style.CONTENT_WIDTH)
@@ -345,11 +450,11 @@ function menu.linearSV()
             vars.endSV = 1
         end
 
-        gui.title("Utilities", true)
+        gui.title("Utilities")
 
         gui.intermediatePoints(vars)
 
-        gui.title("Calculate", true)
+        gui.title("Calculate")
 
         if gui.insertButton() then
             vars.lastSVs = sv.linear(
@@ -360,11 +465,11 @@ function menu.linearSV()
                 vars.intermediatePoints,
                 vars.skipEndSV
             )
-            editor.placeSVs(vars.lastSVs)
+            editor.placeElements(vars.lastSVs)
         end
 
         if #vars.lastSVs > 0 then
-            gui.title("Plots", true)
+            gui.title("Plots")
             gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
@@ -376,7 +481,7 @@ function menu.linearSV()
 end
 
 function menu.stutterSV()
-    if imgui.BeginTabItem("Stutter SV") then
+    if imgui.BeginTabItem("Stutter") then
         local menuID = "stutter"
         local vars = {
             skipEndSV = false,
@@ -391,11 +496,11 @@ function menu.stutterSV()
         }
         util.retrieveStateVariables(menuID, vars)
 
-        gui.title("Note")
+        gui.title("Note", true)
 
         imgui.Text("Select some hitobjects and play around!")
 
-        gui.title("Settings", true)
+        gui.title("Settings")
 
         local modes = {
             "Distance between notes",
@@ -453,7 +558,7 @@ function menu.stutterSV()
         imgui.PopItemWidth()
 
         -- Update limits after duration has changed
-        vars.startSV = math.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
+        vars.startSV = mathematics.clamp(vars.startSV, startSVBounds[1], startSVBounds[2])
 
         gui.spacing()
 
@@ -474,7 +579,7 @@ function menu.stutterSV()
             "value, where the projected equalize SV would be start to become negative."
         )
 
-        gui.title("Calculate", true)
+        gui.title("Calculate")
 
         if gui.insertButton() then
             local offsets = {}
@@ -488,7 +593,7 @@ function menu.stutterSV()
             elseif #offsets == 1 then
                 statusMessage = "Needs hitobjects on different offsets selected!"
             else
-                offsets = util.unique(offsets)
+                offsets = util.uniqueBy(offsets)
 
                 vars.lastSVs = sv.stutter(
                     table.sort(offsets),
@@ -501,7 +606,7 @@ function menu.stutterSV()
                     vars.effectDurationValue
                 )
 
-                editor.placeSVs(vars.lastSVs)
+                editor.placeElements(vars.lastSVs)
             end
         end
 
@@ -540,14 +645,14 @@ function menu.cubicBezierSV()
 
         util.retrieveStateVariables(menuID, vars)
 
-        gui.title("Note")
+        gui.title("Note", true)
         gui.hyperlink("https://cubic-bezier.com/")
 
-        gui.title("Offset", true)
+        gui.title("Offset")
 
         gui.startEndOffset(vars)
 
-        gui.title("Values", true)
+        gui.title("Values")
 
         local widths = util.calcAbsoluteWidths(style.BUTTON_WIDGET_RATIOS)
 
@@ -596,18 +701,18 @@ function menu.cubicBezierSV()
         gui.helpMarker("x: 0.0 - 1.0\ny: -1.0 - 2.0")
 
         -- Set limits here instead of in the DragFloat4, since this also covers the parsed string
-        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, math.clamp, xBounds))
-        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, math.clamp, yBounds))
+        vars.x1, vars.x2 = table.unpack(util.mapFunctionToTable({vars.x1, vars.x2}, mathematics.clamp, xBounds))
+        vars.y1, vars.y2 = table.unpack(util.mapFunctionToTable({vars.y1, vars.y2}, mathematics.clamp, yBounds))
 
         gui.spacing()
 
         gui.averageSV(vars, widths)
 
-        gui.title("Utilities", true)
+        gui.title("Utilities")
 
         gui.intermediatePoints(vars)
 
-        gui.title("Calculate", true)
+        gui.title("Calculate")
 
         if gui.insertButton() then
             statusMessage = "pressed"
@@ -623,17 +728,223 @@ function menu.cubicBezierSV()
                 vars.skipEndSV
             )
 
-            editor.placeSVs(vars.lastSVs)
+            editor.placeElements(vars.lastSVs)
         end
 
         if #vars.lastSVs > 0 then
-            gui.title("Plots", true)
+            gui.title("Plots")
             gui.plot(vars.lastPositionValues, "Position Data", "y")
             gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
         end
 
         util.saveStateVariables(menuID, vars)
 
+        imgui.EndTabItem()
+    end
+end
+
+function menu.rangeEditor()
+    if imgui.BeginTabItem("Range Editor") then
+        local menuID = "range"
+        local vars = {
+            startOffset = 0,
+            endOffset = 0,
+            selections = {
+                [0] = {},
+                [1] = {},
+                [2] = {}
+            },
+            type = 0,
+            windowSelectedOpen = false,
+            -- mode = 0,
+        }
+
+        util.retrieveStateVariables(menuID, vars)
+
+        gui.title("Note", true)
+            imgui.TextWrapped("This is a very powerful tool and " ..
+                "can potentially erase hours of work, so please be careful and work on a " ..
+                "temporary difficulty if necessary! Please keep in mind that the selection " ..
+                "is cleared once you leave the editor (including testplaying).")
+
+        gui.title("Settings")
+            -- local modes = {
+            --     "Indirect",
+            --     "Direct"
+            -- }
+
+            -- -- TODO: Edit mode functionality
+
+            -- imgui.PushItemWidth(style.CONTENT_WIDTH)
+            -- _, vars.mode = imgui.Combo("Edit Mode", vars.mode, modes, #modes)
+            -- imgui.PopItemWidth()
+
+            -- gui.helpMarker(
+            --     "The range editor is based on two modes. Direct mode edits the " ..
+            --     "map directly, while indirect mode represents a temporary testing " ..
+            --     "area (called 'selection') where you can freely add/remove/edit " ..
+            --     "elements however you like without affecting the map itself. " ..
+            --     "You're free to insert your selection into the map after you're " ..
+            --     "done editing your selections."
+            -- )
+
+            local selectableTypes = {
+                "SVs",
+                "Notes",
+                "BPM Points"
+            }
+
+            imgui.PushItemWidth(style.CONTENT_WIDTH)
+            _, vars.type = imgui.Combo("Selection Type", vars.type, selectableTypes, #selectableTypes)
+            imgui.PopItemWidth()
+
+        gui.title("Range")
+            gui.startEndOffset(vars)
+
+        gui.title("Selection")
+
+            local buttonWidths = util.calcAbsoluteWidths({0.5, 0.5})
+            local addRangeButtonWidth
+            if #vars.selections[vars.type] > 0 then addRangeButtonWidth = buttonWidths[1]
+            else addRangeButtonWidth = style.CONTENT_WIDTH end
+
+            if imgui.Button("Add range", {addRangeButtonWidth, style.DEFAULT_WIDGET_HEIGHT}) then
+                local elements = {
+                    [0] = map.ScrollVelocities,
+                    [1] = map.HitObjects,
+                    [2] = map.TimingPoints
+                }
+
+                local previousCount = #vars.selections[vars.type]
+
+                -- Find
+                local newElements = util.filter(
+                    elements[vars.type],
+                    function(i, element)
+                        return      element.StartTime >= vars.startOffset
+                                and element.StartTime <= vars.endOffset
+                    end
+                )
+
+                -- Add
+                newElements = util.mergeUnique(
+                    vars.selections[vars.type],
+                    newElements,
+                    editor.typeAttributes[vars.type]
+                )
+
+                -- Sort
+                newElements = table.sort(
+                    newElements,
+                    function(a,b) return a.StartTime < b.StartTime end
+                )
+
+                vars.selections[vars.type] = newElements
+
+                if #vars.selections[vars.type] - previousCount == 0 then
+                    statusMessage = string.format("No %s in range!", selectableTypes[vars.type + 1])
+                else
+                    statusMessage = string.format(
+                        "Added %s %s",
+                        #vars.selections[vars.type] - previousCount,
+                        selectableTypes[vars.type + 1]
+                    )
+                end
+            end
+
+            if #vars.selections[vars.type] > 0 then
+                imgui.SameLine(0, style.SAMELINE_SPACING)
+
+                if imgui.Button("Remove range", {buttonWidths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+                    local previousCount = #vars.selections[vars.type]
+                    vars.selections[vars.type] = util.filter(
+                        vars.selections[vars.type],
+                        function(i, element)
+                            return not (
+                                element.StartTime >= vars.startOffset
+                                and element.StartTime <= vars.endOffset
+                            )
+                        end
+                    )
+
+                    if #vars.selections[vars.type] - previousCount == 0 then
+                        statusMessage = string.format("No %s in range!", selectableTypes[vars.type + 1])
+                    else
+                        statusMessage = string.format(
+                            "Removed %s %s",
+                            previousCount - #vars.selections[vars.type],
+                            selectableTypes[vars.type + 1]
+                        )
+                    end
+
+                end
+
+                imgui.SameLine(0, style.SAMELINE_SPACING)
+                imgui.Text(string.format("%s %s in selection", #vars.selections[vars.type], selectableTypes[vars.type + 1]))
+
+                if imgui.Button("Clear selection", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+                    vars.selections[vars.type] = {}
+                    statusMessage = "Cleared selection"
+                end
+
+                imgui.SameLine(0, style.SAMELINE_SPACING)
+
+                if imgui.Button("Toggle window", {buttonWidths[2], style.DEFAULT_WIDGET_HEIGHT}) then
+                    vars.windowSelectedOpen = not vars.windowSelectedOpen
+                end
+
+                if vars.windowSelectedOpen then
+                    window.selectedRange(vars)
+                end
+
+                -- TODO: Cut selection from map
+                -- TODO: Edit values (add, multiply, set)
+                -- TODO: Crossedit (add, multiply)
+                -- TODO: Subdivide by n or to time
+                -- TODO: Delete nth with offset
+                -- TODO: Plot (not for hitobjects)
+                -- TODO: Export as CSV/YAML
+
+                gui.title("Editor Actions")
+
+                    if imgui.Button("Paste at current timestamp", style.FULLSIZE_WIDGET_SIZE) then
+                        local delta = state.SongTime - vars.selections[vars.type][1].StartTime
+
+                        local newTable = editor.createNewTableOfElements(
+                            vars.selections[vars.type],
+                            vars.type,
+                            {
+                                StartTime = function (startTime) return startTime + delta end,
+                                EndTime = function (endTime) -- used for notes, ignored for svs/bpms
+                                    if endTime == 0 then return 0
+                                    else return endTime + delta end
+                                end
+                            }
+                        )
+
+                        editor.placeElements(newTable, vars.type)
+                    end
+
+                    if imgui.Button("Paste at all selected notes", style.FULLSIZE_WIDGET_SIZE) then
+                        for _, hitObject in pairs(state.SelectedHitObjects) do
+                            local delta = hitObject.StartTime - vars.selections[vars.type][1].StartTime
+                            local newTable = editor.createNewTableOfElements(
+                                vars.selections[vars.type],
+                                vars.type,
+                                {
+                                    StartTime = function (startTime) return startTime + delta end,
+                                    EndTime = function (endTime) -- used for notes, ignored for svs/bpms
+                                        if endTime == 0 then return 0
+                                        else return endTime + delta end
+                                    end
+                                }
+                            )
+                            editor.placeElements(newTable, vars.type)
+                        end
+                    end
+            end
+
+        util.saveStateVariables(menuID, vars)
         imgui.EndTabItem()
     end
 end
@@ -647,6 +958,7 @@ style.CONTENT_WIDTH = 250
 style.DEFAULT_WIDGET_HEIGHT = 26
 style.HYPERLINK_COLOR = { 0.53, 0.66, 0.96, 1.00 }
 style.BUTTON_WIDGET_RATIOS = { 0.3, 0.7 }
+style.FULLSIZE_WIDGET_SIZE = {style.CONTENT_WIDTH, style.DEFAULT_WIDGET_HEIGHT}
 
 function style.applyStyle()
 
@@ -800,8 +1112,8 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     local totalSampleSize = 2500
     local allBezierSamples = {}
     for t=0, 1, 1/totalSampleSize do
-        local x = math.cubicBezier({0, P1_x, P2_x, 1}, t)
-        local y = math.cubicBezier({0, P1_y, P2_y, 1}, t)
+        local x = mathematics.cubicBezier({0, P1_x, P2_x, 1}, t)
+        local y = mathematics.cubicBezier({0, P1_y, P2_y, 1}, t)
         table.insert(allBezierSamples, {x=x,y=y})
     end
 
@@ -819,7 +1131,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
 
     for i = 1, intermediatePoints, 1 do
         local offset = (i-1) * timeInterval + startOffset
-        local velocity = math.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
+        local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
         table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
     end
 
@@ -873,11 +1185,12 @@ function util.toString(var, imguiText)
     return string
 end
 
-function util.calcAbsoluteWidths(relativeWidths)
+function util.calcAbsoluteWidths(relativeWidths, width)
     local absoluteWidths = {}
     local n = #relativeWidths
+    local totalWidth = width or style.CONTENT_WIDTH
     for _, value in pairs(relativeWidths) do
-        table.insert(absoluteWidths, (value * style.CONTENT_WIDTH) - (style.SAMELINE_SPACING/n))
+        table.insert(absoluteWidths, (value * totalWidth) - (style.SAMELINE_SPACING/n))
     end
     return absoluteWidths
 end
@@ -910,18 +1223,57 @@ function util.mapFunctionToTable(oldTable, func, params)
     return newTable
 end
 
-function util.unique(table)
+function util.uniqueBy(t, attribute)
     local hash = {}
     local res = {}
 
-    for _,v in ipairs(table) do
-        if (not hash[v]) then
+    for _,v in ipairs(t) do
+
+        local key
+        if attribute then
+            key = v[attribute]
+        else
+            key = v
+        end
+
+        if (not hash[key]) then
             res[#res+1] = v
-            hash[v] = true
+            hash[key] = true
         end
     end
 
     return res
+end
+
+function util.filter(t, condition)
+    local filtered = {}
+    for key, value in pairs(t) do
+        if condition(key, value) then table.insert(filtered, value) end
+    end
+    return filtered
+end
+
+function util.mergeUnique(t1, t2, keysToCompare)
+    local hash = {}
+    local newTable = {}
+
+    for _, t in pairs({t1, t2}) do
+        for _, element in pairs(t) do
+            -- You can't directly set the table as the hash value, since tables
+            -- are compared by reference and everything with tables is pass by reference
+            local hashValue = ""
+            for _, key in pairs(keysToCompare) do
+                hashValue = hashValue .. element[key] .. "|"
+            end
+
+            if not hash[hashValue] then
+                table.insert(newTable, element)
+                hash[hashValue] = true
+            end
+        end
+    end
+
+    return newTable
 end
 
 -------------------------------------------------------------------------------------
@@ -929,7 +1281,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.6.2"
+    statusMessage = state.GetValue("statusMessage") or "b2020.7.13"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
@@ -938,7 +1290,7 @@ function window.svMenu()
     menu.linearSV()
     menu.stutterSV()
     menu.cubicBezierSV()
-    -- menu.editSVRange()
+    menu.rangeEditor()
     -- menu.BpmGradient()
     imgui.EndTabBar()
 
@@ -954,6 +1306,63 @@ function window.svMenu()
     state.SetValue("statusMessage", statusMessage)
 end
 
+function window.selectedRange(vars)
+
+    local windowWidth = 100 * #editor.typeAttributes[vars.type]
+    imgui.SetNextWindowSize({windowWidth, 500})
+
+    imgui.Begin("Selected elements", true, imgui_window_flags.AlwaysAutoResize)
+
+        local buttonWidths = util.calcAbsoluteWidths({1/4, 1/4, 1/4}, windowWidth)
+
+        if imgui.Button("Close Window" --[[ , {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT} ]] ) then
+            vars.windowSelectedOpen = false
+        end
+
+        -- imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        -- if imgui.Button("Export as CSV", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        --     statusMessage = "Not implemented yet!"
+        -- end
+        -- imgui.SameLine(0, style.SAMELINE_SPACING)
+
+        -- if imgui.Button("Export as YAML", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+        --     statusMessage = "Not implemented yet!"
+        -- end
+
+        imgui.Columns(#editor.typeAttributes[vars.type])
+
+        for _, value in pairs(editor.typeAttributes[vars.type]) do
+            imgui.Text(value)
+            imgui.NextColumn()
+        end
+        imgui.Separator()
+
+        for _, element in pairs(vars.selections[vars.type]) do
+            for _, attribute in pairs(editor.typeAttributes[vars.type]) do
+
+                -- TODO: Implememt selection select (as stupid as it sounds)
+                local value = element[attribute] or "null"
+                local string = "null"
+
+                if type(value) == "number" then
+                    string = string.gsub(string.format("%.2f", value), "%.00", "", 1)
+
+                elseif value then -- not nil
+                    string = "userdata"
+
+                end
+
+                imgui.Text(string)
+                imgui.NextColumn()
+            end
+        end
+
+        imgui.Columns(1)
+        state.IsWindowHovered = imgui.IsWindowHovered()
+    imgui.End()
+end
+
 -------------------------------------------------------------------------------------
 -- modules\_main.lua
 -------------------------------------------------------------------------------------
@@ -965,6 +1374,7 @@ end
 -- MAIN ------------------------------------------------------
 
 function draw()
+    imgui.ShowDemoWindow()
     style.applyStyle()
     window.svMenu()
 end
