@@ -1,10 +1,13 @@
-function gui.title(title, skipSeparator)
+function gui.title(title, skipSeparator, helpMarkerText)
     if not skipSeparator then
         gui.spacing()
         imgui.Separator()
     end
     gui.spacing()
     imgui.Text(string.upper(title))
+    if helpMarkerText then
+        gui.helpMarker(helpMarkerText)
+    end
     gui.spacing()
 end
 

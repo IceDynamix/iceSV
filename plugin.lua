@@ -134,13 +134,16 @@ end
 -- modules\gui.lua
 -------------------------------------------------------------------------------------
 
-function gui.title(title, skipSeparator)
+function gui.title(title, skipSeparator, helpMarkerText)
     if not skipSeparator then
         gui.spacing()
         imgui.Separator()
     end
     gui.spacing()
     imgui.Text(string.upper(title))
+    if helpMarkerText then
+        gui.helpMarker(helpMarkerText)
+    end
     gui.spacing()
 end
 
@@ -392,8 +395,8 @@ mathematics.comparisonOperators = {
 
 -- No minus/division/root since they are present in the given operators already
 -- Add negative values to subtract, multiply with 1/x to divide by x etc.
-mathematics.valueOperators = {
-    "+", "*", "^"
+mathematics.arithmeticOperators = {
+    "=", "+", "×", "^"
 }
 
 function mathematics.evaluateComparison(operator, value1, value2)
@@ -402,11 +405,22 @@ function mathematics.evaluateComparison(operator, value1, value2)
         ["!="] = function (v1, v2) return v1 ~= v2 end,
         ["<"]  = function (v1, v2) return v1 < v2 end,
         ["<="] = function (v1, v2) return v1 <= v2 end,
-        [">="]  = function (v1, v2) return v1 >= v2 end,
-        [">"] = function (v1, v2) return v1 > v2 end
+        [">="] = function (v1, v2) return v1 >= v2 end,
+        [">"]  = function (v1, v2) return v1 > v2 end
     }
 
     return compareFunctions[operator](value1, value2)
+end
+
+function mathematics.evaluateArithmetics(operator, oldValue, changeValue)
+    local arithmeticFunctions = {
+        ["="] = function (v1, v2) return v2 end,
+        ["+"] = function (v1, v2) return v1 + v2 end,
+        ["×"] = function (v1, v2) return v1 * v2 end,
+        ["^"] = function (v1, v2) return v1 ^ v2 end
+    }
+
+    return arithmeticFunctions[operator](oldValue, changeValue)
 end
 
 -------------------------------------------------------------------------------------
@@ -799,8 +813,15 @@ function menu.rangeEditor()
             },
             type = 0,
             windowSelectedOpen = false,
-            useSelectionFilters = false,
             selectionFilters = {
+                StartTime = {active = false, operator = 0, value = 0},
+                Multiplier = {active = false, operator = 0, value = 0},
+                EndTime = {active = false, operator = 0, value = 0},
+                Lane = {active = false, operator = 0, value = 0},
+                EditorLayer = {active = false, operator = 0, value = 0},
+                Bpm = {active = false, operator = 0, value = 0}
+            },
+            arithmeticActions = {
                 StartTime = {active = false, operator = 0, value = 0},
                 Multiplier = {active = false, operator = 0, value = 0},
                 EndTime = {active = false, operator = 0, value = 0},
@@ -818,7 +839,11 @@ function menu.rangeEditor()
             "temporary difficulty if necessary! Please keep in mind that the selection " ..
             "is cleared once you leave the editor (including testplaying).")
 
-        gui.title("Settings")
+        gui.title("Range")
+        gui.startEndOffset(vars)
+
+        gui.title("Selection", false, "You can think of the selection as your second clipboard. Once elements are in your selection, you can edit the element's values and/or paste them at different points in the map. Or just delete it, it's up to you.\n\nFilters limit SVs/Notes/BPM Points in the given range to be added/removed. Every active condition must be true (AND). A (OR) can be simulated by adding a range multiple times with different filters.")
+
         local selectableTypes = {
             "SVs",
             "Notes",
@@ -829,30 +854,22 @@ function menu.rangeEditor()
         _, vars.type = imgui.Combo("Selection Type", vars.type, selectableTypes, #selectableTypes)
         imgui.PopItemWidth()
 
-        gui.title("Range")
-        gui.startEndOffset(vars)
-
-        gui.title("Selection")
-
         local buttonWidths = util.calcAbsoluteWidths({0.5, 0.5})
         local addRangeButtonWidth
         if #vars.selections[vars.type] > 0 then addRangeButtonWidth = buttonWidths[1]
         else addRangeButtonWidth = style.CONTENT_WIDTH end
 
-        _, vars.useSelectionFilters = imgui.Checkbox("Use selection filters?", vars.useSelectionFilters)
+        gui.spacing()
 
-        gui.tooltip("Applies a filter for SVs in the given range to be added/removed. Every active condition must be true.")
+        local widths = util.calcAbsoluteWidths({0.25, 0.75}, style.CONTENT_WIDTH - style.DEFAULT_WIDGET_HEIGHT - style.SAMELINE_SPACING)
+        for i, attribute in pairs(editor.typeAttributes[vars.type]) do
+            if attribute == "StartTime" then goto continue end -- imagine a conitnue
+            _, vars.selectionFilters[attribute].active = imgui.Checkbox(
+                "##ActiveCheckbox" .. attribute, vars.selectionFilters[attribute].active
+            )
 
-        if vars.useSelectionFilters then
-            local widths = util.calcAbsoluteWidths({0.25, 0.75}, style.CONTENT_WIDTH - style.DEFAULT_WIDGET_HEIGHT - style.SAMELINE_SPACING)
-            for i, attribute in pairs(editor.typeAttributes[vars.type]) do
-                if attribute == "StartTime" then goto continue end -- imagine a conitnue
-                _, vars.selectionFilters[attribute].active = imgui.Checkbox(
-                    "##ActiveCheckbox" .. attribute, vars.selectionFilters[attribute].active
-                )
-
-                gui.tooltip("Filter is active?")
-                gui.sameLine()
+            gui.sameLine()
+            if vars.selectionFilters[attribute].active then
                 imgui.PushItemWidth(widths[1])
                 _, vars.selectionFilters[attribute].operator = imgui.Combo(
                     "##comparisonOperator" .. attribute,
@@ -865,11 +882,13 @@ function menu.rangeEditor()
                 imgui.PushItemWidth(widths[2])
                 _, vars.selectionFilters[attribute].value = imgui.InputFloat(attribute, vars.selectionFilters[attribute].value)
                 imgui.PopItemWidth()
-
-                ::continue::
+            else
+                imgui.Text(attribute .. " Filter")
             end
-            gui.spacing()
+
+            ::continue::
         end
+        gui.spacing()
 
         if imgui.Button("Add range", {addRangeButtonWidth, style.DEFAULT_WIDGET_HEIGHT}) then
             local elements = {
@@ -992,6 +1011,61 @@ function menu.rangeEditor()
             -- TODO: Delete nth with offset
             -- TODO: Plot (not for hitobjects)
             -- TODO: Export as CSV/YAML
+
+            local undoHelpText = "If you decide to undo a value edit via the editor Ctrl+Z shortcut, then please keep in mind that you have to undo twice to get back to the original state, since the plugin essentially removes and then pastes the edited points. You'll need to redo your selection, since restoring the previous selection isn't doable right now. Also, editing editor layer doesn't work right now, but filtering does."
+
+            gui.title("Edit Values", false, undoHelpText)
+            widths = util.calcAbsoluteWidths({0.35, 0.25, 0.40}, style.CONTENT_WIDTH - style.DEFAULT_WIDGET_HEIGHT - style.SAMELINE_SPACING*2)
+            for i, attribute in pairs(editor.typeAttributes[vars.type]) do
+
+                if attribute == "EditorLayer" then goto continue end
+
+                _, vars.arithmeticActions[attribute].active = imgui.Checkbox(
+                    "##activeCheckbox" .. attribute, vars.arithmeticActions[attribute].active
+                )
+
+                gui.sameLine()
+                if vars.arithmeticActions[attribute].active then
+                    if imgui.Button("Apply##" .. attribute, {widths[1], style.DEFAULT_WIDGET_HEIGHT}) then
+                        local newElements = editor.createNewTableOfElements(
+                            vars.selections[vars.type],
+                            vars.type,
+                            {
+                                [attribute] = function (value)
+                                    return mathematics.evaluateArithmetics(
+                                        mathematics.arithmeticOperators[vars.arithmeticActions[attribute].operator + 1],
+                                        value,
+                                        vars.arithmeticActions[attribute].value
+                                    )
+                                end
+                            }
+                        )
+                        editor.removeElements(vars.selections[vars.type], vars.type)
+                        editor.placeElements(newElements, vars.type)
+                        vars.selections[vars.type] = newElements
+                    end
+
+                    gui.sameLine()
+                    imgui.PushItemWidth(widths[2])
+                    _, vars.arithmeticActions[attribute].operator = imgui.Combo(
+                        "##arithmeticOperator" .. attribute,
+                        vars.arithmeticActions[attribute].operator,
+                        mathematics.arithmeticOperators,
+                        #mathematics.arithmeticOperators
+                    )
+                    imgui.PopItemWidth()
+                    gui.sameLine()
+                    imgui.PushItemWidth(widths[3])
+                    _, vars.arithmeticActions[attribute].value = imgui.InputFloat(
+                        attribute .. "##arithmeticValue" .. attribute,
+                        vars.arithmeticActions[attribute].value
+                    )
+                    imgui.PopItemWidth()
+                else
+                    imgui.Text(attribute)
+                end
+                ::continue::
+            end
 
             gui.title("Editor Actions")
 
