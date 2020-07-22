@@ -8,6 +8,10 @@ function gui.title(title, skipSeparator)
     gui.spacing()
 end
 
+function gui.sameLine()
+    imgui.SameLine(0, style.SAMELINE_SPACING)
+end
+
 function gui.separator()
     gui.spacing()
     imgui.Separator()
