@@ -45,6 +45,22 @@ function editor.placeElements(elements, type)
     statusMessage = status .. "!"
 end
 
+function editor.removeElements(elements, type)
+    if #elements == 0 then return end
+    local status = "Removed " .. #elements .. " "
+    if not type or type == 0 then
+        actions.RemoveScrollVelocityBatch(elements)
+        status = status .. "SVs"
+    elseif type == 1 then
+        actions.RemoveHitObjectBatch(elements)
+        status = status .. "notes"
+    elseif type == 2 then
+        actions.RemoveTimingPointBatch(elements)
+        status = status .. "BPM Points"
+    end
+    statusMessage = status .. "!"
+end
+
 editor.typeAttributes = {
     -- SV
     [0] = {
@@ -768,26 +784,6 @@ function menu.rangeEditor()
                 "is cleared once you leave the editor (including testplaying).")
 
         gui.title("Settings")
-            -- local modes = {
-            --     "Indirect",
-            --     "Direct"
-            -- }
-
-            -- -- TODO: Edit mode functionality
-
-            -- imgui.PushItemWidth(style.CONTENT_WIDTH)
-            -- _, vars.mode = imgui.Combo("Edit Mode", vars.mode, modes, #modes)
-            -- imgui.PopItemWidth()
-
-            -- gui.helpMarker(
-            --     "The range editor is based on two modes. Direct mode edits the " ..
-            --     "map directly, while indirect mode represents a temporary testing " ..
-            --     "area (called 'selection') where you can freely add/remove/edit " ..
-            --     "elements however you like without affecting the map itself. " ..
-            --     "You're free to insert your selection into the map after you're " ..
-            --     "done editing your selections."
-            -- )
-
             local selectableTypes = {
                 "SVs",
                 "Notes",
@@ -897,7 +893,6 @@ function menu.rangeEditor()
                     window.selectedRange(vars)
                 end
 
-                -- TODO: Cut selection from map
                 -- TODO: Edit values (add, multiply, set)
                 -- TODO: Crossedit (add, multiply)
                 -- TODO: Subdivide by n or to time
@@ -941,6 +936,10 @@ function menu.rangeEditor()
                             )
                             editor.placeElements(newTable, vars.type)
                         end
+                    end
+
+                    if imgui.Button("Delete selection from map", style.FULLSIZE_WIDGET_SIZE) then
+                        editor.removeElements(vars.selections[vars.type], vars.type)
                     end
             end
 
@@ -1281,7 +1280,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.7.13"
+    statusMessage = state.GetValue("statusMessage") or "b2020.7.22"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 

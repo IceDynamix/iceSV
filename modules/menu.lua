@@ -396,26 +396,6 @@ function menu.rangeEditor()
                 "is cleared once you leave the editor (including testplaying).")
 
         gui.title("Settings")
-            -- local modes = {
-            --     "Indirect",
-            --     "Direct"
-            -- }
-
-            -- -- TODO: Edit mode functionality
-
-            -- imgui.PushItemWidth(style.CONTENT_WIDTH)
-            -- _, vars.mode = imgui.Combo("Edit Mode", vars.mode, modes, #modes)
-            -- imgui.PopItemWidth()
-
-            -- gui.helpMarker(
-            --     "The range editor is based on two modes. Direct mode edits the " ..
-            --     "map directly, while indirect mode represents a temporary testing " ..
-            --     "area (called 'selection') where you can freely add/remove/edit " ..
-            --     "elements however you like without affecting the map itself. " ..
-            --     "You're free to insert your selection into the map after you're " ..
-            --     "done editing your selections."
-            -- )
-
             local selectableTypes = {
                 "SVs",
                 "Notes",
@@ -525,7 +505,6 @@ function menu.rangeEditor()
                     window.selectedRange(vars)
                 end
 
-                -- TODO: Cut selection from map
                 -- TODO: Edit values (add, multiply, set)
                 -- TODO: Crossedit (add, multiply)
                 -- TODO: Subdivide by n or to time
@@ -569,6 +548,10 @@ function menu.rangeEditor()
                             )
                             editor.placeElements(newTable, vars.type)
                         end
+                    end
+
+                    if imgui.Button("Delete selection from map", style.FULLSIZE_WIDGET_SIZE) then
+                        editor.removeElements(vars.selections[vars.type], vars.type)
                     end
             end
 
