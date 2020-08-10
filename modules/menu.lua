@@ -2,16 +2,17 @@ function menu.information()
     if imgui.BeginTabItem("Information") then
         gui.title("Help", true)
 
-        imgui.TextWrapped("Hover over each function for an explanation")
-
         imgui.BulletText("Linear SV")
-        gui.tooltip("Creates an SV gradient based on two points in time")
+        gui.helpMarker("Creates an SV gradient based on two points in time")
 
         imgui.BulletText("Stutter SV")
-        gui.tooltip("Creates a normalized stutter effect with start, equalize and end SV")
+        gui.helpMarker("Creates a normalized stutter effect with start, equalize and end SV")
 
         imgui.BulletText("Cubic Bezier")
-        gui.tooltip("Creates velocity points for a path defined by a cubic bezier curve")
+        gui.helpMarker("Creates velocity points for a path defined by a cubic bezier curve")
+
+        imgui.BulletText("Range Editor")
+        gui.helpMarker("Edit SVs/Notes/BPM points in the map in nearly limitless ways")
 
         gui.title("About")
 
@@ -274,7 +275,7 @@ function menu.cubicBezierSV()
         util.retrieveStateVariables(menuID, vars)
 
         gui.title("Note", true)
-        gui.hyperlink("https://cubic-bezier.com/")
+        gui.hyperlink("https://cubic-bezier.com/", "Create a cubic bezier here first!")
 
         gui.title("Offset")
 
@@ -678,6 +679,16 @@ function menu.rangeEditor()
 
             if imgui.Button("Delete selection from map", style.FULLSIZE_WIDGET_SIZE) then
                 editor.removeElements(vars.selections[vars.type], vars.type)
+            end
+
+            if vars.type == 1 then
+                if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) then
+                    local stringList = {}
+                    for _, hitObject in pairs(vars.selections[1]) do
+                        table.insert(stringList, hitObject.StartTime .. "|" .. hitObject.Lane)
+                    end
+                    actions.GoToObjects(table.concat(stringList, ","))
+                end
             end
         end
 
