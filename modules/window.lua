@@ -37,12 +37,12 @@ function window.selectedRange(vars)
             vars.windowSelectedOpen = false
         end
 
-        -- imgui.SameLine(0, style.SAMELINE_SPACING)
+        -- gui.sameLine()
 
         -- if imgui.Button("Export as CSV", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
         --     statusMessage = "Not implemented yet!"
         -- end
-        -- imgui.SameLine(0, style.SAMELINE_SPACING)
+        -- gui.sameLine()
 
         -- if imgui.Button("Export as YAML", {buttonWidths[1], style.DEFAULT_WIDGET_HEIGHT}) then
         --     statusMessage = "Not implemented yet!"
