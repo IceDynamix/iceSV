@@ -14,6 +14,22 @@ function editor.placeElements(elements, type)
     statusMessage = status .. "!"
 end
 
+function editor.removeElements(elements, type)
+    if #elements == 0 then return end
+    local status = "Removed " .. #elements .. " "
+    if not type or type == 0 then
+        actions.RemoveScrollVelocityBatch(elements)
+        status = status .. "SVs"
+    elseif type == 1 then
+        actions.RemoveHitObjectBatch(elements)
+        status = status .. "notes"
+    elseif type == 2 then
+        actions.RemoveTimingPointBatch(elements)
+        status = status .. "BPM Points"
+    end
+    statusMessage = status .. "!"
+end
+
 editor.typeAttributes = {
     -- SV
     [0] = {

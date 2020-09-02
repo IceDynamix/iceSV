@@ -45,3 +45,37 @@ function mathematics.max(t)
 
     return max
 end
+
+mathematics.comparisonOperators = {
+    "=", "!=", "<", "<=", ">=", ">"
+}
+
+-- No minus/division/root since they are present in the given operators already
+-- Add negative values to subtract, multiply with 1/x to divide by x etc.
+mathematics.arithmeticOperators = {
+    "=", "+", "×", "^"
+}
+
+function mathematics.evaluateComparison(operator, value1, value2)
+    local compareFunctions = {
+        ["="]  = function (v1, v2) return v1 == v2 end,
+        ["!="] = function (v1, v2) return v1 ~= v2 end,
+        ["<"]  = function (v1, v2) return v1 < v2 end,
+        ["<="] = function (v1, v2) return v1 <= v2 end,
+        [">="] = function (v1, v2) return v1 >= v2 end,
+        [">"]  = function (v1, v2) return v1 > v2 end
+    }
+
+    return compareFunctions[operator](value1, value2)
+end
+
+function mathematics.evaluateArithmetics(operator, oldValue, changeValue)
+    local arithmeticFunctions = {
+        ["="] = function (v1, v2) return v2 end,
+        ["+"] = function (v1, v2) return v1 + v2 end,
+        ["×"] = function (v1, v2) return v1 * v2 end,
+        ["^"] = function (v1, v2) return v1 ^ v2 end
+    }
+
+    return arithmeticFunctions[operator](oldValue, changeValue)
+end
