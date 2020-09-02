@@ -1110,14 +1110,8 @@ function menu.rangeEditor()
                 editor.removeElements(vars.selections[vars.type], vars.type)
             end
 
-            if vars.type == 1 then
-                if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) then
-                    local stringList = {}
-                    for _, hitObject in pairs(vars.selections[1]) do
-                        table.insert(stringList, hitObject.StartTime .. "|" .. hitObject.Lane)
-                    end
-                    actions.GoToObjects(table.concat(stringList, ","))
-                end
+            if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) and vars.type == 1 then
+                actions.SetHitObjectSelection(vars.selections[1])
             end
         end
 
@@ -1458,7 +1452,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.7.30"
+    statusMessage = state.GetValue("statusMessage") or "b2020.9.2"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
