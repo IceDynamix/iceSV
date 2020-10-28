@@ -34,15 +34,16 @@ function editor.placeElements(elements, type)
     local status = "Inserted " .. #elements .. " "
     if not type or type == 0 then
         actions.PlaceScrollVelocityBatch(elements)
-        status = status .. "SVs"
+        status = status .. "SV"
     elseif type == 1 then
         actions.PlaceHitObjectBatch(elements)
-        status = status .. "notes"
+        status = status .. "note"
     elseif type == 2 then
         actions.PlaceTimingPointBatch(elements)
-        status = status .. "BPM Points"
+        status = status .. "BPM Point"
     end
-    statusMessage = status .. "!"
+    local pluralS = #elements == 1 and "" or "s"
+    statusMessage = status .. pluralS  .. "!"
 end
 
 function editor.removeElements(elements, type)
@@ -526,10 +527,28 @@ function menu.linearSV()
             editor.placeElements(vars.lastSVs)
         end
 
-        if #vars.lastSVs > 0 then
-            gui.title("Plots")
-            gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
+        if imgui.Button("Cross multiply in map", style.FULLSIZE_WIDGET_SIZE) then
+            baseSV = util.filter(
+                map.ScrollVelocities,
+                function (k, v)
+                    return v.StartTime >= vars.startOffset
+                        and vars.startOffset <= vars.endOffset
+                end
+            )
+            crossSV = sv.linear(
+                vars.startSV,
+                vars.endSV,
+                vars.startOffset,
+                vars.endOffset,
+                500, -- used for more accurate linear values when looking up
+                vars.skipEndSV
+            )
+            newSV = sv.crossMultiply(baseSV, crossSV)
+            actions.RemoveScrollVelocityBatch(baseSV)
+            editor.placeElements(newSV)
         end
+
+        gui.tooltip("Multiplies all SVs in the map between the given start and end offset linearly with the given parameters")
 
         -- Save variables
         util.saveStateVariables(menuID, vars)
@@ -1189,7 +1208,7 @@ function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     for step = 0, intermediatePoints, 1 do
         local offset = step * timeInterval + startOffset
         local velocity = step * velocityInterval + startSV
-        SVs[step] = utils.CreateScrollVelocity(offset, velocity)
+        SVs[step+1] = utils.CreateScrollVelocity(offset, velocity)
     end
 
     return SVs
@@ -1286,6 +1305,34 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     end
 
     return SVs, util.subdivideTable(allBezierSamples, 1, 50, true)
+end
+
+
+--[[
+    Example for cross multiply taken from reamberPy
+
+    baseSVs    | (1.0) ------- (2.0) ------- (3.0) |
+    crossSVs   | (1.0)  (1.5) ------- (2.0) ------ |
+    __________ | _________________________________ |
+    result     | (1.0) ------- (3.0) ------- (6.0) |
+]]
+
+function sv.crossMultiply(baseSVs, crossSVs)
+    local SVs = {}
+    local crossIndex = 1
+
+    for i, baseSV in pairs(baseSVs) do
+        while crossIndex < #crossSVs and baseSV.StartTime > crossSVs[crossIndex+1].StartTime do
+            crossIndex = crossIndex + 1
+        end
+
+        SVs[i] = utils.CreateScrollVelocity(
+            baseSV.StartTime,
+            baseSV.Multiplier * crossSVs[crossIndex].Multiplier
+        )
+    end
+
+    return SVs
 end
 
 -------------------------------------------------------------------------------------

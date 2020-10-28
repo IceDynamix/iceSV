@@ -97,10 +97,28 @@ function menu.linearSV()
             editor.placeElements(vars.lastSVs)
         end
 
-        if #vars.lastSVs > 0 then
-            gui.title("Plots")
-            gui.plot(vars.lastSVs, "Velocity Data", "Multiplier")
+        if imgui.Button("Cross multiply in map", style.FULLSIZE_WIDGET_SIZE) then
+            baseSV = util.filter(
+                map.ScrollVelocities,
+                function (k, v)
+                    return v.StartTime >= vars.startOffset
+                        and vars.startOffset <= vars.endOffset
+                end
+            )
+            crossSV = sv.linear(
+                vars.startSV,
+                vars.endSV,
+                vars.startOffset,
+                vars.endOffset,
+                500, -- used for more accurate linear values when looking up
+                vars.skipEndSV
+            )
+            newSV = sv.crossMultiply(baseSV, crossSV)
+            actions.RemoveScrollVelocityBatch(baseSV)
+            editor.placeElements(newSV)
         end
+
+        gui.tooltip("Multiplies all SVs in the map between the given start and end offset linearly with the given parameters")
 
         -- Save variables
         util.saveStateVariables(menuID, vars)

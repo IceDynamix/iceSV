@@ -3,15 +3,16 @@ function editor.placeElements(elements, type)
     local status = "Inserted " .. #elements .. " "
     if not type or type == 0 then
         actions.PlaceScrollVelocityBatch(elements)
-        status = status .. "SVs"
+        status = status .. "SV"
     elseif type == 1 then
         actions.PlaceHitObjectBatch(elements)
-        status = status .. "notes"
+        status = status .. "note"
     elseif type == 2 then
         actions.PlaceTimingPointBatch(elements)
-        status = status .. "BPM Points"
+        status = status .. "BPM Point"
     end
-    statusMessage = status .. "!"
+    local pluralS = #elements == 1 and "" or "s"
+    statusMessage = status .. pluralS  .. "!"
 end
 
 function editor.removeElements(elements, type)

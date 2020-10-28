@@ -11,7 +11,7 @@ function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     for step = 0, intermediatePoints, 1 do
         local offset = step * timeInterval + startOffset
         local velocity = step * velocityInterval + startSV
-        SVs[step] = utils.CreateScrollVelocity(offset, velocity)
+        SVs[step+1] = utils.CreateScrollVelocity(offset, velocity)
     end
 
     return SVs
@@ -108,4 +108,32 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     end
 
     return SVs, util.subdivideTable(allBezierSamples, 1, 50, true)
+end
+
+
+--[[
+    Example for cross multiply taken from reamberPy
+
+    baseSVs    | (1.0) ------- (2.0) ------- (3.0) |
+    crossSVs   | (1.0)  (1.5) ------- (2.0) ------ |
+    __________ | _________________________________ |
+    result     | (1.0) ------- (3.0) ------- (6.0) |
+]]
+
+function sv.crossMultiply(baseSVs, crossSVs)
+    local SVs = {}
+    local crossIndex = 1
+
+    for i, baseSV in pairs(baseSVs) do
+        while crossIndex < #crossSVs and baseSV.StartTime > crossSVs[crossIndex+1].StartTime do
+            crossIndex = crossIndex + 1
+        end
+
+        SVs[i] = utils.CreateScrollVelocity(
+            baseSV.StartTime,
+            baseSV.Multiplier * crossSVs[crossIndex].Multiplier
+        )
+    end
+
+    return SVs
 end
