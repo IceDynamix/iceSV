@@ -11,7 +11,7 @@ function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     for step = 0, intermediatePoints, 1 do
         local offset = step * timeInterval + startOffset
         local velocity = step * velocityInterval + startSV
-        table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
+        SVs[step] = utils.CreateScrollVelocity(offset, velocity)
     end
 
     return SVs
@@ -98,7 +98,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     for i = 1, intermediatePoints, 1 do
         local offset = (i-1) * timeInterval + startOffset
         local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
-        table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
+        SVs[i] = utils.CreateScrollVelocity(offset, velocity)
     end
 
     if skipEndSV == false then

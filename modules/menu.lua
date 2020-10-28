@@ -213,8 +213,8 @@ function menu.stutterSV()
         if gui.insertButton() then
             local offsets = {}
 
-            for _, hitObject in pairs(state.SelectedHitObjects) do
-                table.insert(offsets, hitObject.StartTime)
+            for i, hitObject in pairs(state.SelectedHitObjects) do
+                offsets[i] = hitObject.StartTime
             end
 
             if #offsets == 0 then
@@ -684,8 +684,8 @@ function menu.rangeEditor()
             if vars.type == 1 then
                 if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) then
                     local stringList = {}
-                    for _, hitObject in pairs(vars.selections[1]) do
-                        table.insert(stringList, hitObject.StartTime .. "|" .. hitObject.Lane)
+                    for i, hitObject in pairs(vars.selections[1]) do
+                        stringList[i] =  hitObject.StartTime .. "|" .. hitObject.Lane
                     end
                     actions.GoToObjects(table.concat(stringList, ","))
                 end

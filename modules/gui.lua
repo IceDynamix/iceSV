@@ -114,8 +114,8 @@ function gui.plot(values, title, valueAttribute)
 
     if valueAttribute and values[1][valueAttribute] then
         trueValues = {}
-        for _, value in pairs(values) do
-            table.insert(trueValues, value[valueAttribute])
+        for i, value in pairs(values) do
+            trueValues[i] = value[valueAttribute]
         end
     else
         trueValues = values

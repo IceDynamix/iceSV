@@ -1,12 +1,12 @@
 function util.retrieveStateVariables(menuID, variables)
-    for key in pairs(variables) do
-        variables[key] = state.GetValue(menuID..key) or variables[key]
+    for key, value in pairs(variables) do
+        variables[key] = state.GetValue(menuID..key) or value
     end
 end
 
 function util.saveStateVariables(menuID, variables)
-    for key in pairs(variables) do
-        state.SetValue(menuID..key, variables[key])
+    for key, value in pairs(variables) do
+        state.SetValue(menuID..key, value)
     end
 end
 
@@ -41,8 +41,8 @@ function util.calcAbsoluteWidths(relativeWidths, width)
     local absoluteWidths = {}
     local n = #relativeWidths
     local totalWidth = width or style.CONTENT_WIDTH
-    for _, value in pairs(relativeWidths) do
-        table.insert(absoluteWidths, (value * totalWidth) - (style.SAMELINE_SPACING/n))
+    for i, value in pairs(relativeWidths) do
+        absoluteWidths[i] = (value * totalWidth) - (style.SAMELINE_SPACING/n)
     end
     return absoluteWidths
 end
@@ -65,11 +65,11 @@ end
 
 function util.mapFunctionToTable(oldTable, func, params)
     local newTable = {}
-    for _, value in pairs(oldTable) do
+    for i, value in pairs(oldTable) do
         if params then
-            table.insert(newTable, func(value, table.unpack(params)))
+            newTable[i] = func(value, table.unpack(params))
         else
-            table.insert(newTable, func(value))
+            newTable[i] = func(value)
         end
     end
     return newTable
@@ -80,14 +80,7 @@ function util.uniqueBy(t, attribute)
     local res = {}
 
     for _,v in ipairs(t) do
-
-        local key
-        if attribute then
-            key = v[attribute]
-        else
-            key = v
-        end
-
+        local key = attribute and v[attribute] or v
         if (not hash[key]) then
             res[#res+1] = v
             hash[key] = true

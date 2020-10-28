@@ -71,7 +71,7 @@ editor.typeAttributes = {
 function editor.createNewTableOfElements(elements, typeMode, settings)
     local newTable = {}
 
-    for _, element in pairs(elements) do
+    for i, element in pairs(elements) do
         local newElement = {}
         for _, attribute in pairs(editor.typeAttributes[typeMode]) do
             if settings[attribute] then
@@ -81,18 +81,18 @@ function editor.createNewTableOfElements(elements, typeMode, settings)
             end
         end
 
-        table.insert(newTable, newElement)
+        newTable[i] = newElement
     end
 
     local newElements = {}
 
-    for _, el in pairs(newTable) do
+    for i, el in pairs(newTable) do
         if typeMode == 0 then
-            table.insert(newElements, utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
+            newElements[i] = utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
         elseif typeMode == 1 then
-            table.insert(newElements, utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
+            newElements[i] = utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
         elseif typeMode == 2 then
-            table.insert(newElements, utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
+            newElements[i] = utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
         end
     end
 

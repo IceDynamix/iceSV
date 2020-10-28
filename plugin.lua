@@ -102,7 +102,7 @@ editor.typeAttributes = {
 function editor.createNewTableOfElements(elements, typeMode, settings)
     local newTable = {}
 
-    for _, element in pairs(elements) do
+    for i, element in pairs(elements) do
         local newElement = {}
         for _, attribute in pairs(editor.typeAttributes[typeMode]) do
             if settings[attribute] then
@@ -112,18 +112,18 @@ function editor.createNewTableOfElements(elements, typeMode, settings)
             end
         end
 
-        table.insert(newTable, newElement)
+        newTable[i] = newElement
     end
 
     local newElements = {}
 
-    for _, el in pairs(newTable) do
+    for i, el in pairs(newTable) do
         if typeMode == 0 then
-            table.insert(newElements, utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
+            newElements[i] = utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
         elseif typeMode == 1 then
-            table.insert(newElements, utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
+            newElements[i] = utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
         elseif typeMode == 2 then
-            table.insert(newElements, utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
+            newElements[i] = utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
         end
     end
 
@@ -250,8 +250,8 @@ function gui.plot(values, title, valueAttribute)
 
     if valueAttribute and values[1][valueAttribute] then
         trueValues = {}
-        for _, value in pairs(values) do
-            table.insert(trueValues, value[valueAttribute])
+        for i, value in pairs(values) do
+            trueValues[i] = value[valueAttribute]
         end
     else
         trueValues = values
@@ -642,8 +642,8 @@ function menu.stutterSV()
         if gui.insertButton() then
             local offsets = {}
 
-            for _, hitObject in pairs(state.SelectedHitObjects) do
-                table.insert(offsets, hitObject.StartTime)
+            for i, hitObject in pairs(state.SelectedHitObjects) do
+                offsets[i] = hitObject.StartTime
             end
 
             if #offsets == 0 then
@@ -1113,8 +1113,8 @@ function menu.rangeEditor()
             if vars.type == 1 then
                 if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) then
                     local stringList = {}
-                    for _, hitObject in pairs(vars.selections[1]) do
-                        table.insert(stringList, hitObject.StartTime .. "|" .. hitObject.Lane)
+                    for i, hitObject in pairs(vars.selections[1]) do
+                        stringList[i] =  hitObject.StartTime .. "|" .. hitObject.Lane
                     end
                     actions.GoToObjects(table.concat(stringList, ","))
                 end
@@ -1163,33 +1163,6 @@ function style.applyStyle()
 
     -- VALUES
 
-    -- Will make a PR soon to have this ImGui enum accessible
-    local imgui_style_var = {
-        Alpha = 0,
-        WindowPadding = 1,
-        WindowRounding = 2,
-        WindowBorderSize = 3,
-        WindowMinSize = 4,
-        WindowTitleAlign = 5,
-        ChildRounding = 6,
-        ChildBorderSize = 7,
-        PopupRounding = 8,
-        PopupBorderSize = 9,
-        FramePadding = 10,
-        FrameRounding = 11,
-        FrameBorderSize = 12,
-        ItemSpacing = 13,
-        ItemInnerSpacing = 14,
-        IndentSpacing = 15,
-        ScrollbarSize = 16,
-        ScrollbarRounding = 17,
-        GrabMinSize = 18,
-        GrabRounding = 19,
-        TabRounding = 20,
-        ButtonTextAlign = 21,
-        COUNT = 22
-    }
-
     local rounding = 0
 
     imgui.PushStyleVar( imgui_style_var.WindowPadding,      { 20, 10 } )
@@ -1222,7 +1195,7 @@ function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     for step = 0, intermediatePoints, 1 do
         local offset = step * timeInterval + startOffset
         local velocity = step * velocityInterval + startSV
-        table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
+        SVs[step] = utils.CreateScrollVelocity(offset, velocity)
     end
 
     return SVs
@@ -1309,7 +1282,7 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
     for i = 1, intermediatePoints, 1 do
         local offset = (i-1) * timeInterval + startOffset
         local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
-        table.insert(SVs, utils.CreateScrollVelocity(offset, velocity))
+        SVs[i] = utils.CreateScrollVelocity(offset, velocity)
     end
 
     if skipEndSV == false then
@@ -1324,14 +1297,14 @@ end
 -------------------------------------------------------------------------------------
 
 function util.retrieveStateVariables(menuID, variables)
-    for key in pairs(variables) do
-        variables[key] = state.GetValue(menuID..key) or variables[key]
+    for key, value in pairs(variables) do
+        variables[key] = state.GetValue(menuID..key) or value
     end
 end
 
 function util.saveStateVariables(menuID, variables)
-    for key in pairs(variables) do
-        state.SetValue(menuID..key, variables[key])
+    for key, value in pairs(variables) do
+        state.SetValue(menuID..key, value)
     end
 end
 
@@ -1366,8 +1339,8 @@ function util.calcAbsoluteWidths(relativeWidths, width)
     local absoluteWidths = {}
     local n = #relativeWidths
     local totalWidth = width or style.CONTENT_WIDTH
-    for _, value in pairs(relativeWidths) do
-        table.insert(absoluteWidths, (value * totalWidth) - (style.SAMELINE_SPACING/n))
+    for i, value in pairs(relativeWidths) do
+        absoluteWidths[i] = (value * totalWidth) - (style.SAMELINE_SPACING/n)
     end
     return absoluteWidths
 end
@@ -1390,11 +1363,11 @@ end
 
 function util.mapFunctionToTable(oldTable, func, params)
     local newTable = {}
-    for _, value in pairs(oldTable) do
+    for i, value in pairs(oldTable) do
         if params then
-            table.insert(newTable, func(value, table.unpack(params)))
+            newTable[i] = func(value, table.unpack(params))
         else
-            table.insert(newTable, func(value))
+            newTable[i] = func(value)
         end
     end
     return newTable
@@ -1405,14 +1378,7 @@ function util.uniqueBy(t, attribute)
     local res = {}
 
     for _,v in ipairs(t) do
-
-        local key
-        if attribute then
-            key = v[attribute]
-        else
-            key = v
-        end
-
+        local key = attribute and v[attribute] or v
         if (not hash[key]) then
             res[#res+1] = v
             hash[key] = true
@@ -1458,7 +1424,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.7.30"
+    statusMessage = state.GetValue("statusMessage") or "b2020.10.28"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
