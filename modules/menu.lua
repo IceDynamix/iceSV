@@ -2,33 +2,29 @@ function menu.information()
     if imgui.BeginTabItem("Information") then
         gui.title("Help", true)
 
-        imgui.BulletText("Linear SV")
-        gui.helpMarker("Creates an SV gradient based on two points in time")
+        function helpItem(item, text)
+            imgui.BulletText(item)
+            gui.helpMarker(text)
+        end
 
-        imgui.BulletText("Stutter SV")
-        gui.helpMarker("Creates a normalized stutter effect with start, equalize and end SV")
+        helpItem("Linear SV", "Creates an SV gradient based on two points in time")
+        helpItem("Stutter SV", "Creates a normalized stutter effect with start, equalize and end SV")
+        helpItem("Cubic Bezier", "Creates velocity points for a path defined by a cubic bezier curve")
+        helpItem("Range Editor", "Edit SVs/Notes/BPM points in the map in nearly limitless ways")
 
-        imgui.BulletText("Cubic Bezier")
-        gui.helpMarker("Creates velocity points for a path defined by a cubic bezier curve")
+        gui.title("About", false, "Hyperlinks have been removed so copy-able links have been provided to paste into your browser")
 
-        imgui.BulletText("Range Editor")
-        gui.helpMarker("Edit SVs/Notes/BPM points in the map in nearly limitless ways")
+        function listItem(text, url)
+            imgui.TextWrapped(text)
+            gui.hyperlink(url)
+        end
 
-        gui.title("About")
+        listItem("iceSV Wiki (in progress)", "https://github.com/IceDynamix/iceSV/wiki")
+        listItem("Github Repository", "https://github.com/IceDynamix/iceSV")
+        listItem("Heavily inspired by Evening's re:amber", "https://github.com/Eve-ning/reamber")
 
-        imgui.Columns(2)
-
-        imgui.Text("iceSV Wiki (in progress)");                                                 imgui.NextColumn();
-        gui.hyperlink("https://github.com/IceDynamix/iceSV/wiki", "IceDynamix/iceSV/wiki");     imgui.NextColumn();
-        imgui.Text("Github Repository");                                                        imgui.NextColumn();
-        gui.hyperlink("https://github.com/IceDynamix/iceSV", "IceDynamix/iceSV");               imgui.NextColumn();
-        imgui.TextWrapped("Created by");                                                        imgui.NextColumn();
-        gui.hyperlink("https://github.com/IceDynamix/", "IceDynamix");                          imgui.NextColumn();
-        imgui.TextWrapped("Heavily inspired by");                                               imgui.NextColumn();
-        gui.hyperlink("https://github.com/Eve-ning/reamber", "Evening's re:amber")              imgui.NextColumn();
         gui.tooltip("let's be real this is basically a direct quaver port")
 
-        imgui.Columns(1)
         imgui.EndTabItem()
     end
 end

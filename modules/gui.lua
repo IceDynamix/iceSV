@@ -134,20 +134,11 @@ function gui.plot(values, title, valueAttribute)
     )
 end
 
-function gui.hyperlink(url, text)
-    imgui.TextColored(style.HYPERLINK_COLOR, text or url)
-    -- gui.underline
-
-    if imgui.IsItemClicked() then utils.OpenUrl(url, true) end
-
-    if text then gui.tooltip(url) end
-end
-
-function gui.underline()
-    min = imgui.GetItemRectMin();
-    max = imgui.GetItemRectMax();
-    min.y = max.y;
-    imgui.GetWindowDrawList().AddLine(min, max);
+-- utils.OpenUrl() has been removed so i'll have to make do with this
+function gui.hyperlink(url)
+    imgui.PushItemWidth(imgui.GetContentRegionAvailWidth())
+    imgui.InputText("##"..url, url, #url, imgui_input_text_flags.AutoSelectAll)
+    imgui.PopItemWidth()
 end
 
 function gui.bulletList(listOfLines)

@@ -45,3 +45,7 @@ function style.applyStyle()
     imgui.PushStyleVar( imgui_style_var.ScrollbarRounding,  rounding   )
     imgui.PushStyleVar( imgui_style_var.TabRounding,        rounding   )
 end
+
+function style.rgb1ToUint(r, g, b, a)
+    return a * 16 ^ 6 + b * 16 ^ 4 + g * 16 ^ 2 + r
+end
