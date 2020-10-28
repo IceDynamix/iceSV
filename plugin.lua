@@ -119,11 +119,11 @@ function editor.createNewTableOfElements(elements, typeMode, settings)
 
     for i, el in pairs(newTable) do
         if typeMode == 0 then
-            newElements[i] = utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
+            newElements[i] = utils.CreateScrollVelocity(el.StartTime, el.Multiplier)
         elseif typeMode == 1 then
-            newElements[i] = utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
+            newElements[i] = utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil)
         elseif typeMode == 2 then
-            newElements[i] = utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
+            newElements[i] = utils.CreateTimingPoint(el.StartTime, el.Bpm, nil)
         end
     end
 
@@ -1110,14 +1110,8 @@ function menu.rangeEditor()
                 editor.removeElements(vars.selections[vars.type], vars.type)
             end
 
-            if vars.type == 1 then
-                if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) then
-                    local stringList = {}
-                    for i, hitObject in pairs(vars.selections[1]) do
-                        stringList[i] =  hitObject.StartTime .. "|" .. hitObject.Lane
-                    end
-                    actions.GoToObjects(table.concat(stringList, ","))
-                end
+            if imgui.Button("Select in editor", style.FULLSIZE_WIDGET_SIZE) and vars.type == 1 then
+                actions.SetHitObjectSelection(vars.selections[1])
             end
         end
 

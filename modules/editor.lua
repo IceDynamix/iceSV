@@ -88,11 +88,11 @@ function editor.createNewTableOfElements(elements, typeMode, settings)
 
     for i, el in pairs(newTable) do
         if typeMode == 0 then
-            newElements[i] = utils.CreateScrollVelocity(el.StartTime, el.Multiplier))
+            newElements[i] = utils.CreateScrollVelocity(el.StartTime, el.Multiplier)
         elseif typeMode == 1 then
-            newElements[i] = utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil))
+            newElements[i] = utils.CreateHitObject(el.StartTime, el.Lane, el.EndTime, nil)
         elseif typeMode == 2 then
-            newElements[i] = utils.CreateTimingPoint(el.StartTime, el.Bpm, nil))
+            newElements[i] = utils.CreateTimingPoint(el.StartTime, el.Bpm, nil)
         end
     end
 
