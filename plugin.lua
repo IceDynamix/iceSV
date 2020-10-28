@@ -1273,11 +1273,13 @@ function sv.cubicBezier(P1_x, P1_y, P2_x, P2_y, startOffset, endOffset, averageS
         end
     end
 
-    for i = 1, intermediatePoints, 1 do
-        local offset = (i-1) * timeInterval + startOffset
+    for i = 2, intermediatePoints, 1 do
+        local offset = (i-2) * timeInterval + startOffset
         local velocity = mathematics.round((positions[i] - (positions[i-1] or 0)) * averageSV * intermediatePoints, 2)
         SVs[i] = utils.CreateScrollVelocity(offset, velocity)
     end
+
+    table.insert(SVs, utils.CreateScrollVelocity((intermediatePoints - 1) * timeInterval + startOffset, SVs[#SVs].Multiplier))
 
     if skipEndSV == false then
         table.insert(SVs, utils.CreateScrollVelocity(endOffset, averageSV))
