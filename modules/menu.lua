@@ -98,7 +98,7 @@ function menu.linearSV()
                 map.ScrollVelocities,
                 function (k, v)
                     return v.StartTime >= vars.startOffset
-                        and vars.startOffset <= vars.endOffset
+                        and v.StartTime <= vars.endOffset
                 end
             )
             crossSV = sv.linear(

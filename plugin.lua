@@ -519,7 +519,7 @@ function menu.linearSV()
                 map.ScrollVelocities,
                 function (k, v)
                     return v.StartTime >= vars.startOffset
-                        and vars.startOffset <= vars.endOffset
+                        and v.StartTime <= vars.endOffset
                 end
             )
             crossSV = sv.linear(
@@ -1458,7 +1458,7 @@ end
 -------------------------------------------------------------------------------------
 
 function window.svMenu()
-    statusMessage = state.GetValue("statusMessage") or "b2020.10.28"
+    statusMessage = state.GetValue("statusMessage") or "b2020.10.29"
 
     imgui.Begin("SV Menu", true, imgui_window_flags.AlwaysAutoResize)
 
