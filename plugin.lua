@@ -550,6 +550,7 @@ function menu.stutterSV()
         local vars = {
             skipEndSV = false,
             skipFinalEndSV = false,
+            normalizeStutters = false,
             startSV = 1.5,
             duration = 0.5,
             averageSV = 1.0,
@@ -643,6 +644,14 @@ function menu.stutterSV()
             "value, where the projected equalize SV would be start to become negative."
         )
 
+        _, vars.normalizeStutters = imgui.Checkbox("Normalize stutters?", vars.normalizeStutters)
+        gui.helpMarker(
+            "Do NOT use this if you don't know what you are doing. " ..
+            "This option will normalize SV according to notes snap, " ..
+            "and unexpected results can happen if notes are too close too " ..
+            "each other, and/or the start SV duration is too high."
+        )
+
         gui.title("Calculate")
 
         if gui.insertButton() then
@@ -666,6 +675,7 @@ function menu.stutterSV()
                     vars.averageSV,
                     vars.skipEndSV,
                     vars.skipFinalEndSV,
+                    vars.normalizeStutters,
                     vars.effectDurationMode,
                     vars.effectDurationValue
                 )
@@ -1205,7 +1215,7 @@ function sv.linear(startSV, endSV, startOffset, endOffset, intermediatePoints, s
     return SVs
 end
 
-function sv.stutter(offsets, startSV, duration, averageSV, skipEndSV, skipFinalEndSV, effectDurationMode, effectDurationValue)
+function sv.stutter(offsets, startSV, duration, averageSV, skipEndSV, skipFinalEndSV, normalizeStutters, effectDurationMode, effectDurationValue)
     local SVs = {}
 
     for i, offset in ipairs(offsets) do
@@ -1222,7 +1232,15 @@ function sv.stutter(offsets, startSV, duration, averageSV, skipEndSV, skipFinalE
             length = effectDurationValue
         end
 
-        table.insert(SVs, utils.CreateScrollVelocity(length*duration + offset, (duration*startSV-averageSV)/(duration-1)))
+        local realDuration
+        if normalizeStutters then 
+            -- divide by 1 for 1:1, 0.5 for 1/2, etc ...
+            realDuration = duration / (length / (60000/map.GetTimingPointAt(offset).Bpm))
+        else
+            realDuration = duration
+        end
+
+        table.insert(SVs, utils.CreateScrollVelocity(length*realDuration + offset, (duration*startSV-averageSV)/(duration-1)))
 
         local lastOffsetEnd = offset+length
         if skipEndSV == false and (offsets[i+1] ~= lastOffsetEnd) then
